@@ -14,14 +14,14 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "nombre_usuario",
             "correo",
             "password",
-            "password_hash",
+            "password",
             "fecha_nacimiento",
             "biografia",
             "avatar",
             "estado",
             "creado_en",
         ]
-        read_only_fields = ["unique_id", "creado_en", "password_hash"]
+        read_only_fields = ["unique_id", "creado_en", "password"]
 
     def create(self, validated_data):
         raw_password = validated_data.pop("password", None)
@@ -48,7 +48,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         password = validated_data.pop("password")
         usuario = Usuario.objects.create(
-            password_hash=make_password(password),
+            password=make_password(password),
             estado="active",
             **validated_data,
         )
@@ -67,7 +67,7 @@ class LoginSerializer(serializers.Serializer):
         except Usuario.DoesNotExist as exc:
             raise serializers.ValidationError("Credenciales inválidas.") from exc
 
-        if not check_password(password, usuario.password_hash):
+        if not check_password(password, usuario.password):
             raise serializers.ValidationError("Credenciales inválidas.")
         if usuario.estado != "active":
             raise serializers.ValidationError("Usuario inactivo.")

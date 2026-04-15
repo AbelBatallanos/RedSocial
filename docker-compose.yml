@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:15
+    container_name: tf_postgres_db
+    restart: always
+    volumes:
+      - tf_postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .env
+    environment:
+      # Docker Compose tomará automáticamente los valores de tu .env
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+
+  tracking_friends: # Nombre del servicio
+    build: 
+      context: ./backend
+      dockerfile: DockerFile
+    container_name: tracking_friends_backend # Nombre del contenedor al correr
+    image: tracking_friends_img:v1 # Nombre de la imagen guardada
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=db
+    depends_on:
+      - db
+  
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: tf_pgadmin
+    restart: always
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com # Email para entrar al panel
+      - PGADMIN_DEFAULT_PASSWORD=admin        # Contraseña para entrar al panel
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+volumes:
+  tf_postgres_data: # Nombre del volumen persistente

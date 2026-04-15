@@ -12,7 +12,7 @@ class UsuarioEstado(models.TextChoices):
 class Usuario(TimeStampedModel):
     nombre_usuario = models.CharField(max_length=150, unique=True)
     correo = models.EmailField(unique=True)
-    password_hash = models.CharField(max_length=255)
+    password = models.CharField(max_length=255)
     fecha_nacimiento = models.DateField(null=True, blank=True)
     biografia = models.TextField(null=True, blank=True)
     avatar = models.URLField(max_length=500, null=True, blank=True)
