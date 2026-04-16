@@ -1,9 +1,9 @@
-from django.db import models
+# from django.db import models
 
-from .base import TimeStampedModel
+# from .base import TimeStampedModel
 
 
 
-class Premium(models.):
+# class Premium(models.):
     
 

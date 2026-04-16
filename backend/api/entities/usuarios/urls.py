@@ -1,15 +1,19 @@
 from django.urls import path
-from rest_framework.routers import DefaultRouter
-
-from .views import LoginAPIView, LogoutAPIView, RegisterAPIView, UsuarioViewSet
-
-router = DefaultRouter()
-router.register(r"", UsuarioViewSet, basename="usuarios")
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from .views import RegisterView, LogoutView
 
 urlpatterns = [
-    path("auth/register/", RegisterAPIView.as_view(), name="register"),
-    path("auth/login/", LoginAPIView.as_view(), name="login"),
-    path("auth/logout/", LogoutAPIView.as_view(), name="logout"),
+    # --- LOGIN ---
+    # Le envías {"correo": "...", "password": "..."} y te devuelve el JWT
+    path('login/', TokenObtainPairView.as_view(), name='login'), 
+    
+    # --- REGISTER ---
+    path('register/', RegisterView.as_view(), name='register'),
+    
+    # --- LOGOUT ---
+    path('logout/', LogoutView.as_view(), name='logout'),
+    
+    # --- REFRESH TOKEN ---
+    # Sirve para pedir un token nuevo cuando el anterior caduca (sin volver a pedir contraseña)
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
-
-urlpatterns += router.urls
