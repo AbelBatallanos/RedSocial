@@ -73,3 +73,26 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Usuario inactivo.")
         attrs["usuario"] = usuario
         return attrs
+
+
+class UsuariosSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = Usuario
+        fields = ['id', 'nombre_usuario', 'correo', 'avatar', 'biografia', 'fecha_nacimiento', 'estado'] 
+
+
+class MiPerfilSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Usuario
+        fields = [ 'nombre_usuario', 'correo', 'avatar', 'biografia', 'fecha_nacimiento', 'estado']
+        read_only_fields = [ 'correo']  # por ejemplo, si no quieres permitir cambiar el correo
+
+
+    def update(self, instance, validated_data):
+        for attrs, value in validated_data.items():
+            setattr(instance, attrs, value)
+        instance.save()
+        return instance
+
+    

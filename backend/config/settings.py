@@ -44,7 +44,6 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'api',
-
 ]
 
 MIDDLEWARE = [
@@ -84,10 +83,10 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME'),         # red_social_db
-        'USER': os.environ.get('DB_USER'),         # traking
-        'PASSWORD': os.environ.get('DB_PASSWORD'), # 123456789
-        'HOST': 'db',                              # Nombre del servicio en el compose
+        'NAME': os.environ.get('DB_NAME'),        
+        'USER': os.environ.get('DB_USER'),        
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': 'db',                              
         'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
@@ -147,5 +146,4 @@ SIMPLE_JWT = {
 CORS_ALLOW_ALL_ORIGINS = True
 
 
-# settings.py
 AUTH_USER_MODEL = 'api.Usuario'

@@ -9,6 +9,7 @@ class AmistadEstado(models.TextChoices):
     ACCEPTED = "accepted", "accepted"
     BLOCKED = "blocked", "blocked"
     REMOVED = "removed", "removed"
+    REJECTED = "rejected", "rejected"
 
 
 class Amistad(TimeStampedModel):
