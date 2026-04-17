@@ -1,12 +1,12 @@
-from .amistades import Amistad
-from .notificaciones import Notificacion
-from .ranking_agregado import RankingAgregado
-from .reacciones import Reaccion
-from .recomendaciones import Recomendacion
-from .usuarios import Usuario
-from .suscripciones import Suscripcion
-from .compartidos import Compartido
-
+from .usuarios import *
+from .amistades import *
+from .base import *
+from .compartidos import *
+from .notificaciones import *
+from .reacciones import *
+from .recomendaciones import *
+from .suscripciones import *
+from .ranking_agregado import *
 __all__ = [
     "Usuario",
     "Amistad",

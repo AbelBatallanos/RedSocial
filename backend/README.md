@@ -45,10 +45,10 @@ docker-compose exec tracking_friends python manage.py makemigrations
 docker-compose exec tracking_friends python manage.py migrate
 
 # Ver los logs del servidor en tiempo real para debugging
-docker-compose logs -f backend
+docker-compose logs -f tracking_friends
 
 # Reiniciar solo el servicio del backend
-docker-compose restart backend
+docker-compose restart tracking_friends
 
 
 
