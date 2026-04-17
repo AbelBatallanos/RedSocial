@@ -7,6 +7,6 @@ from .serializers import ReaccionSerializer
 
 
 class ReaccionViewSet(viewsets.ModelViewSet):
-    queryset = Reaccion.objects.all().order_by("-reaccion_en")
+    queryset = Reaccion.objects.all()
     serializer_class = ReaccionSerializer
     permission_classes = [AllowAny]

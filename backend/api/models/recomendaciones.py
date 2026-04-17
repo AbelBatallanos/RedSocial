@@ -11,6 +11,10 @@ class RecomendacionTipo(models.TextChoices):
     SERIE = "serie", "serie"
     OTRO = "otro", "otro"
 
+class RecomendacionEstado(models.TextChoices):
+    CREADO = "creado", "creado"
+    ELIMINADO = "eliminado", "eliminado"
+
 
 class RecomendacionVisibilidad(models.TextChoices):
     PRIVATE = "private", "private"
@@ -25,11 +29,15 @@ class Recomendacion(TimeStampedModel):
     )
     tipo = models.CharField(max_length=20, choices=RecomendacionTipo.choices)
     titulo = models.CharField(max_length=255)
-    metadata_json = models.JSONField(null=True, blank=True)
+    descripcion = models.TextField(blank=True, null=True) 
+    imagen = models.ImageField(upload_to='recomendaciones/imagenes/', blank=True, null=True)
+    enlace_externo = models.URLField(max_length=500, blank=True, null=True)
+
     visibilidad = models.CharField(
         max_length=20,
         choices=RecomendacionVisibilidad.choices,
     )
+    estado = models.CharField(max_length=20, choices=RecomendacionEstado.choices, default=RecomendacionEstado.CREADO) 
 
     class Meta:
         db_table = "recomendaciones"

@@ -31,7 +31,7 @@ class SolicitarAmistadView(APIView):
             # 2. Validar que el amigo existe
             amigo = Usuario.objects.get(id=data['amigo_id'])
             # 3. Validar que la amistad no existe
-            if Amistad.objects.filter(usuario=usuario, amigo=amigo).exists():
+            if Amistad.objects.filter(usuario=usuario, amigo=amigo, estado='pending').exists():
                 return JsonResponse({"error": "La amistad ya existe"}, status=status.HTTP_400_BAD_REQUEST)
             if str(amigo.id) == str(request.user.id):
                 return JsonResponse({"error": "No puedes solicitarte amistad a ti mismo"}, status=status.HTTP_400_BAD_REQUEST)

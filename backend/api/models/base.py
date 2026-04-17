@@ -8,7 +8,7 @@ class TimeStampedModel(models.Model):
         primary_key=True,
         default=uuid.uuid4,
         editable=False,
-        db_column="UniqueID",
+        db_column="id",
     )
     creado_en = models.DateTimeField(auto_now_add=True, db_index=True)
 
