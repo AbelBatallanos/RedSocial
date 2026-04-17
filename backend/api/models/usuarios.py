@@ -31,7 +31,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
     # Atributos personalizados
     fecha_nacimiento = models.DateField(null=True, blank=True)
     biografia = models.TextField(null=True, blank=True)
-    avatar = models.URLField(max_length=500, null=True, blank=True)
+    avatar = models.ImageField(upload_to='usuarios/avatars/', null=True, blank=True)
     estado = models.CharField(
         max_length=20,
         choices=UsuarioEstado.choices,
