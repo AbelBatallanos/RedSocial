@@ -6,20 +6,33 @@ from rest_framework_simplejwt.tokens import RefreshToken # <-- Esto genera los t
 from ...models.usuarios import Usuario # Ajusta la importación según tu estructura
 from .serializers import UsuariosSerializer, MiPerfilSerializer
 
+from rest_framework.parsers import MultiPartParser, FormParser
+
+
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
-
+# Indicamos que esta vista acepta datos de formularios con archivos
+    parser_classes = (MultiPartParser, FormParser)
     def post(self, request):
         data = request.data
+
+        if not data.get("correo") or not data.get("nombre_usuario") or not data.get("password"):
+            return Response(
+                {"error": "Faltan campos obligatorios (correo, nombre_usuario, password)"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
+            foto = request.FILES.get("avatar", None)
             # 1. Creamos el usuario
             user = Usuario.objects.create_user(
-                correo=data['correo'],
-                nombre_usuario=data['nombre_usuario'],
-                password=data['password'],
-                fecha_nacimiento=data.get('fecha_nacimiento'),
-                biografia=data.get('biografia', '')
+                correo=data.get('correo'),
+                nombre_usuario=data.get('nombre_usuario'),
+                password=data.get('password'),
+                fecha_nacimiento=data.get('fecha_nacimiento', None),
+                biografia=data.get('biografia', ''),
+                avatar = foto
             )
 
             # 2. GENERAMOS EL TOKEN MANUALMENTE PARA EL NUEVO USUARIO
@@ -28,7 +41,7 @@ class RegisterView(APIView):
             return Response({
                 "mensaje": "Usuario creado con éxito",
                 "user": {
-                    "id": user.pk,
+                    "id": user.id,
                     "correo": user.correo,
                     "nombre_usuario": user.nombre_usuario
                 },
@@ -67,16 +80,23 @@ class ListUsuarioView(APIView):
 class MiPerfil(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
-        user = request.user
-        serializer = MiPerfilSerializer(user)
+        # context={"request": request} es vital para que las URLs de las imágenes salgan completas (http://...)
+        serializer = MiPerfilSerializer(request.user, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request):
-        user = request.user
-        serializer = MiPerfilSerializer(user, data=request.data, partial=True)  # partial=True permite updates parciales
+        serializer = MiPerfilSerializer(
+            request.user, 
+            data=request.data, 
+            partial=True, 
+            context={"request": request}
+        )
+        # se ejecutan las validaciones del serializador (validate_nombre_usuario, etc)
         if serializer.is_valid():
+            # Al hacer save(), se llama al método update() que sobreescribimos para borrar la foto vieja
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
+            
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request):

@@ -1,6 +1,6 @@
+import os
 from django.contrib.auth.hashers import check_password, make_password
 from rest_framework import serializers
-
 from api.models import Usuario
 
 
@@ -76,23 +76,36 @@ class LoginSerializer(serializers.Serializer):
 
 
 class UsuariosSerializer(serializers.ModelSerializer):
-    
     class Meta:
         model = Usuario
         fields = ['id', 'nombre_usuario', 'correo', 'avatar', 'biografia', 'fecha_nacimiento', 'estado'] 
-
+    
 
 class MiPerfilSerializer(serializers.ModelSerializer):
+    # Forzamos a que estos campos no sean obligatorios al actualizar
+    biografia = serializers.CharField(required=False, allow_blank=True, max_length=500)
+    avatar = serializers.ImageField(required=False, allow_null=True)
+
     class Meta:
         model = Usuario
-        fields = [ 'nombre_usuario', 'correo', 'avatar', 'biografia', 'fecha_nacimiento', 'estado']
-        read_only_fields = [ 'correo']  # por ejemplo, si no quieres permitir cambiar el correo
+        fields = ['nombre_usuario', 'correo', 'avatar', 'biografia', 'fecha_nacimiento', 'estado']
+        read_only_fields =['id', 'correo']  # por ejemplo, si no quieres permitir cambiar el correo
 
+    def validate_nombre_usuario(self, value):
+        if len(value) < 3:
+            raise serializers.ValidationError("El nombre de usuario debe tener al menos 3 caracteres.")
+        return value
 
     def update(self, instance, validated_data):
-        for attrs, value in validated_data.items():
-            setattr(instance, attrs, value)
-        instance.save()
-        return instance
+        if "avatar" in validated_data:
+            nuevaFoto = validated_data["avatar"]
+
+            # Si el usuario ya tenía una foto, y la nueva es diferente (o es None porque la borró)
+            if instance.avatar and instance.avatar != nuevaFoto:        # Continuamos con el guardado normal
+                # Verificamos que el archivo físico exista antes de intentar borrarlo
+                if os.path.isfile(instance.avatar.path):
+                    os.remove(instance.avatar.path)
+
+        return super().update(instance, validated_data)
 
     

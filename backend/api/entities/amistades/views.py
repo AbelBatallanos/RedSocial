@@ -1,10 +1,12 @@
+from django.db.models import Q
+from django.db import transaction
 from rest_framework import viewsets, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from django.http.response import JsonResponse
 from rest_framework.views import APIView
 
-from api.models import Amistad, Usuario
+from api.models import Amistad, Usuario, Notificacion
 from .serializers import AmistadSerializer, AmistadGetSerializer
 
 
@@ -21,25 +23,57 @@ class AmistadViewSet(viewsets.ModelViewSet):
 
 class SolicitarAmistadView(APIView):
     permission_classes = [IsAuthenticated]
+     
     def post(self, request):
         data = request.data
+        usuario = request.user
+
+        if not data.get('amigo_id'):
+            return JsonResponse({"error": "El campo amigo_id es obligatorio"}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            if not request.data.get('amigo_id'):
-                return JsonResponse({"error": "El campo amigo_id es obligatorio"}, status=status.HTTP_400_BAD_REQUEST)
-            # 1. Validar que el usuario existe
-            usuario = Usuario.objects.get(id=request.user.id)
-            # 2. Validar que el amigo existe
             amigo = Usuario.objects.get(id=data['amigo_id'])
-            # 3. Validar que la amistad no existe
-            if Amistad.objects.filter(usuario=usuario, amigo=amigo, estado='pending').exists():
-                return JsonResponse({"error": "La amistad ya existe"}, status=status.HTTP_400_BAD_REQUEST)
-            if str(amigo.id) == str(request.user.id):
-                return JsonResponse({"error": "No puedes solicitarte amistad a ti mismo"}, status=status.HTTP_400_BAD_REQUEST)
-            # 4. Crear la amistad
-            amistad = Amistad.objects.create(usuario=usuario, amigo=amigo, estado='pending')
-            return JsonResponse({"mensaje": "Amistad solicitada con éxito"}, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Usuario.DoesNotExist:
+            return JsonResponse({"error": "No existe ese usuario"}, status=status.HTTP_404_NOT_FOUND)
+
+        if str(amigo.id) == str(usuario.id):
+            return JsonResponse({"error": "No puedes solicitarte amistad a ti mismo"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Transacción para evitar condiciones de carrera
+        with transaction.atomic():
+            # 1) ¿ya existe exactamente la misma relación (yo -> amigo) en cualquier estado?
+             # ¿Existe relación en la misma dirección con estado pending o accepted?
+            existe_misma = Amistad.objects.filter(
+                Q(usuario=usuario, amigo=amigo) &
+                (Q(estado='pending') | Q(estado='accepted'))
+            ).exists()
+
+            # ¿Existe la relación inversa (amigo -> usuario) con pending o accepted?
+            existe_inversa = Amistad.objects.filter(
+                Q(usuario=amigo, amigo=usuario) &
+                (Q(estado='pending') | Q(estado='accepted'))
+            ).exists()
+
+            if existe_misma or existe_inversa:
+                return JsonResponse({"error": "Ya existe una solicitud o relación entre estos usuarios"}, status=status.HTTP_400_BAD_REQUEST)
+            # 3) No existe ninguna relación: crear nueva solicitud pendiente
+            nueva = Amistad.objects.create(usuario=usuario, amigo=amigo, estado='pending')
+
+            # 4) Crear notificación para el destinatario (amigo)
+            Notificacion.objects.create(
+                user_destino=amigo,
+                tipo='friend_request',
+                payload_json={
+                    "amistad_id": str(nueva.id),
+                    "from_user_id": str(usuario.id),
+                    "from_username": usuario.nombre_usuario,
+                    "message": f"{usuario.nombre_usuario} te ha enviado una solicitud de amistad"
+                },
+                leido=False
+            )
+
+            serializer = AmistadGetSerializer(nueva, context={'request': request})
+            return JsonResponse({"amistad":serializer.data}, status=status.HTTP_201_CREATED)
 
 
 class ObtenerAmistadesPendientesView(APIView):
@@ -48,16 +82,22 @@ class ObtenerAmistadesPendientesView(APIView):
         data = request.data
         try:
             # 1. Obtener las amistades
-            amistades = Amistad.objects.filter(usuario=request.user, estado='pending')
+            amistades = Amistad.objects.filter(amigo=request.user, estado='pending')
             return JsonResponse({"amistades":AmistadGetSerializer(amistades, many=True).data}, status=status.HTTP_200_OK)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)  
 
+
 class ObtenerMisAmigosView(APIView):
     def get(self, request):
         try:
-            amistades = Amistad.objects.filter(usuario=request.user)
-            return JsonResponse({"amistades":AmistadGetSerializer(amistades, many=True).data}, status=status.HTTP_200_OK)
+            amistades = Amistad.objects.filter(
+                Q(usuario=request.user) | Q(amigo=request.user),
+                Q(estado='accepted') | Q(estado='pending')
+            ).select_related('usuario', 'amigo').order_by('-creado_en')
+            # .select_related('usuario', 'amigo')   evitar consultas N+1.
+            serializer = AmistadGetSerializer(amistades, many=True, context={'request': request})
+            return JsonResponse({"amistades": serializer.data}, status=status.HTTP_200_OK)       
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)  
 
@@ -68,7 +108,7 @@ class AceptarAmistadView(APIView):
         data = request.data
         try:
             # 1. Validar que la amistad existe
-            amistad = Amistad.objects.get(id=amistad_id)
+            amistad = Amistad.objects.filter(id=amistad_id, amistad=request.user)
             # 2. Aceptar la amistad
             amistad.estado = 'accepted'
             amistad.save()
@@ -83,7 +123,7 @@ class RechazarAmistadView(APIView):
         data = request.data
         try:
             # 1. Validar que la amistad existe
-            amistad = Amistad.objects.get(id=amistad_id)
+            amistad = Amistad.objects.filter(id=amistad_id, amigo=request.user)
             # 2. Rechazar la amistad
             amistad.estado = 'rejected'
             amistad.save()
