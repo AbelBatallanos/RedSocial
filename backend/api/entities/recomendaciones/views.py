@@ -5,9 +5,13 @@ from django.shortcuts import get_object_or_404
 from django.db import transaction
 
 from api.models import Recomendacion, Usuario, Notificacion, Compartido
-from .serializers import RecomendacionSerializer, CompartidoSerializer, UsuarioMinSerializer
+from .serializers import RecomendacionSerializer, CompartidoSerializer, CompartidoConOtroSerializer, UsuarioMinSerializer
+from rest_framework.parsers import MultiPartParser, FormParser
+
 
 class CrearRecomendacionView(APIView):
+
+    parser_classes = (MultiPartParser, FormParser)
     def post(self, request):
         user = request.user
         
@@ -26,6 +30,9 @@ class CrearRecomendacionView(APIView):
         serializer = RecomendacionSerializer(data=request.data)
         
         if serializer.is_valid():
+            data = serializer.validated_data
+            data.setdefault("visibilidad", "public") #asignamos valores por defect si no hay datos 
+            data.setdefault("tipo", "otro")
             # Pasamos el autor explícitamente al guardar
             serializer.save(autor=user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -64,24 +71,39 @@ class VerMisRecomendacionesView(APIView):
             estado="creado"
         ).order_by("-creado_en")
         
+        compartidasConmigo = Compartido.objects.filter(receptor=request.user, estado="creado")
+        compartiConOtros = Compartido.objects.filter(emisor=request.user, estado="creado")
         serializer = RecomendacionSerializer(recomendaciones, many=True)
-        return Response({"recomendaciones": serializer.data}, status=status.HTTP_200_OK)
+        serial_compartidOtros = CompartidoConOtroSerializer(compartiConOtros, many=True)
+        serial_compartidconmigo = CompartidoSerializer(compartidasConmigo, many=True)
+
+        return Response({"total_recomendaciones":recomendaciones.count(),"recomendaciones": serializer.data,
+        "compartidosconmigo": serial_compartidconmigo.data, "comparticonotros": serial_compartidOtros.data}, status=status.HTTP_200_OK)
 
 
 class VerRecomendacionCompartidaView(APIView): 
     """Muestra el historial de recomendaciones que me han compartido"""
     def get(self, request, id_recomendacion):
-        # Buscamos en la tabla Compartido donde yo soy el receptor
-        compartido = Compartido.objects.filter(
-            id=id_recomendacion,
-            receptor=request.user,
-            estado="creado" # Solo si la recomendación no ha sido eliminada por su autor
-        ).order_by("-creado_en")
+        # 1. Validar que la recomendación existe
+        recomendacion = get_object_or_404(Recomendacion, id=id_recomendacion, estado="creado")
 
-        serializer = CompartidoSerializer(compartidos, many=False)
-        return Response({'recibidas': serializer.data}, status=status.HTTP_200_OK)
+        # 2. Intentar obtener un único Compartido
+        try:
+            compartido = Compartido.objects.get(
+                recomendacion=recomendacion,
+                receptor=request.user,   # usar la instancia, no .id
+                estado="creado"
+            )
+            serlizer = CompartidoSerializer(compartido, many=False)
+            return Response({'recibidas': serlizer.data}, status=status.HTTP_200_OK)
+        except Compartido.DoesNotExist:
+            return Response(
+                {"error": "No existe un registro de compartido para este usuario y recomendación"},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
+# class VerTodasRecomendacionesCompartidas
 class EditOrDeletRecomendacionView(APIView):
     def put(self, request, id_recomendacion):
         recomendacion = get_object_or_404(Recomendacion, id=id_recomendacion, estado="creado")
@@ -130,9 +152,9 @@ class CompartirRecomendacionView(APIView):
                 for amigo in usuarios_amigos:
                     # 1. Crear el registro en el historial Compartido
                     compartidos.append(Compartido(
-                        recomendacion=recomendacion,
+                        recomendacion=recomendacion.id,
                         emisor=request.user,
-                        receptor=amigo
+                        receptor=amigo.id
                     ))
                     
                     # 2. Crear la Notificación
@@ -151,7 +173,7 @@ class CompartirRecomendacionView(APIView):
                 Compartido.objects.bulk_create(compartidos)
                 Notificacion.objects.bulk_create(notificaciones)
                 
-            return Response({"mensaje": f"Compartido con éxito a {len(usuarios_amigos)} amigos"}, status=status.HTTP_201_CREATED)
+                return Response({"mensaje": f"Compartido con éxito a {len(usuarios_amigos)} amigos"}, status=status.HTTP_201_CREATED)
             
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
