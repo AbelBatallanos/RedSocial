@@ -73,7 +73,7 @@ class SolicitarAmistadView(APIView):
             )
 
             serializer = AmistadGetSerializer(nueva, context={'request': request})
-            return JsonResponse({"amistad":serializer.data}, status=status.HTTP_201_CREATED)
+            return JsonResponse({"informacion": "Solicitud de amistad enviada","amistad":serializer.data}, status=status.HTTP_201_CREATED)
 
 
 class ObtenerAmistadesPendientesView(APIView):
@@ -108,14 +108,16 @@ class AceptarAmistadView(APIView):
         data = request.data
         try:
             # 1. Validar que la amistad existe
-            amistad = Amistad.objects.filter(id=amistad_id, amistad=request.user)
+            amistad = Amistad.objects.get(id=amistad_id, amigo=request.user)
             # 2. Aceptar la amistad
             amistad.estado = 'accepted'
             amistad.save()
+           
             return JsonResponse({"mensaje": "Amistad aceptada con éxito"}, status=status.HTTP_200_OK)
+        except Amistad.DoesNotExist:
+            return JsonResponse({"error": "No existe esa solicitud de amistad"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
 
 class RechazarAmistadView(APIView):
     permission_classes = [IsAuthenticated]
@@ -123,11 +125,13 @@ class RechazarAmistadView(APIView):
         data = request.data
         try:
             # 1. Validar que la amistad existe
-            amistad = Amistad.objects.filter(id=amistad_id, amigo=request.user)
+            amistad = Amistad.objects.get(id=amistad_id, amigo=request.user)
             # 2. Rechazar la amistad
             amistad.estado = 'rejected'
             amistad.save()
             return JsonResponse({"mensaje": "Amistad rechazada con éxito"}, status=status.HTTP_200_OK)
+        except Amistad.DoesNotExist:
+            return JsonResponse({"error": "No existe esa solicitud de amistad"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
