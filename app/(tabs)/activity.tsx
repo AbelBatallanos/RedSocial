@@ -10,7 +10,7 @@ const ACTIVITIES = [
     id: '1', 
     type: 'recommendation', 
     user: { name: 'carlos_dev', avatar: 'https://api.dicebear.com/7.x/avataaars/png?seed=carlos' }, 
-    text: 'te envió una recomendación directamente: \"El Rey del Sushi\".',
+    text: 'te enviÃ³ una recomendaciÃ³n directamente: "El Rey del Sushi".',
     time: 'Hace 10 m',
     action: 'Calificar',
     icon: <Star size={14} stroke={COLORS.surface} fill={COLORS.surface} />
@@ -19,7 +19,7 @@ const ACTIVITIES = [
     id: '2', 
     type: 'like', 
     user: { name: 'ana_garcia', avatar: 'https://api.dicebear.com/7.x/avataaars/png?seed=ana' }, 
-    text: 'le dio 5 estrellas a tu recomendación de \"MacBook Air M2\".',
+    text: 'le dio 5 estrellas a tu recomendaciÃ³n de \"MacBook Air M2\".',
     time: 'Hace 2 h',
     icon: <Heart size={14} stroke={COLORS.surface} fill={COLORS.surface} />
   },
@@ -60,7 +60,7 @@ export default function ActivityScreen() {
               
               {item.action && (
                 <View style={styles.actionCard}>
-                  <Text style={styles.actionPrompt}>¿Ya probaste El Rey del Sushi?</Text>
+                  <Text style={styles.actionPrompt}>Ya probaste El Rey del Sushi?</Text>
                   <TouchableOpacity style={styles.actionBtn}>
                     <Text style={styles.actionBtnText}>{item.action} Ahora</Text>
                   </TouchableOpacity>

@@ -6,6 +6,7 @@ export const COLORS = {
   primaryLight: 'rgba(99, 102, 241, 0.15)',
   secondary: '#F43F5E', // Rosa Vibrante
   accent: '#10B981', // Esmeralda
+  error: '#F43F5E',
   
   background: '#0F172A', // Slate 900 (Fondo Principal)
   surface: '#1E293B',    // Slate 800 (Tarjetas y Headers)

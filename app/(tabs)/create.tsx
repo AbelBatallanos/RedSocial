@@ -16,7 +16,7 @@ export default function CreateScreen() {
         <TouchableOpacity style={styles.closeBtn}>
           <X size={24} stroke={COLORS.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Nueva Recomendaci�n</Text>
+        <Text style={styles.headerTitle}>Nueva Recomendación</Text>
         <TouchableOpacity style={styles.publishBtn}>
           <Text style={styles.publishBtnText}>Publicar</Text>
         </TouchableOpacity>
@@ -36,7 +36,7 @@ export default function CreateScreen() {
 
         <TextInput
           style={styles.textInput}
-          placeholder="Ej. La Esquina del Sabor\n�Por qu� lo recomiendas a tus amigos?..."
+          placeholder="Ej. La Esquina del Sabor Por qué lo recomiendas a tus amigos?..."
           placeholderTextColor={COLORS.textTertiary}
           multiline
           value={recommendation}

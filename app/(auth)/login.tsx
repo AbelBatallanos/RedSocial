@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { Button } from '../../src/components/ui/Button';
 import { Input } from '../../src/components/ui/Input';
@@ -7,8 +7,12 @@ import { COLORS, SIZES, globalStyles } from '../../src/styles/theme';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  
+  // Agrupamos el estado para evitar re-renders innecesarios que cierran el teclado
+  const [form, setForm] = useState({
+    email: '',
+    password: ''
+  });
 
   const handleLogin = () => {
     // Aquí irá la lógica de autenticación real
@@ -19,11 +23,17 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView 
         style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        // Usamos 'padding' solo en iOS para que el input no "baile" en Android
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          // CLAVE: Esto permite que los toques en botones funcionen sin cerrar el teclado antes
+          keyboardShouldPersistTaps="always"
+        >
           
-          {/* Header & Logo */}
+          {/* Header & Logo - SE MANTIENE TU DISEÑO */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
               <View style={styles.logoBox}>
@@ -34,38 +44,39 @@ export default function LoginScreen() {
             <Text style={styles.subtitle}>Tus amigos confían en tus gustos.</Text>
           </View>
 
-          {/* Social Auth */}
+          {/* Social Auth - TU BOTÓN DE GOOGLE */}
           <View style={styles.socialAuth}>
             <Button 
               title="Continuar con Google" 
               variant="outline"
               onPress={() => {}}
               style={styles.googleButton}
-              icon={<Text style={{ fontSize: 18, marginRight: 8 }}>G</Text>}
+              icon={<Text style={{ fontSize: 18, marginRight: 8, fontWeight: 'bold' }}>G</Text>}
             />
           </View>
 
-          {/* Divider */}
+          {/* Divider - TU SEPARADOR */}
           <View style={styles.dividerContainer}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>O USA TU EMAIL</Text>
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Form */}
+          {/* Form - TUS INPUTS CON FIX */}
           <View style={styles.formContainer}>
             <Input
               placeholder="Correo electrónico"
               keyboardType="email-address"
               autoCapitalize="none"
-              value={email}
-              onChangeText={setEmail}
+              value={form.email}
+              // Actualizamos el estado del objeto de forma limpia
+              onChangeText={(val) => setForm({ ...form, email: val })}
             />
             <Input
               placeholder="Contraseña"
               secureTextEntry
-              value={password}
-              onChangeText={setPassword}
+              value={form.password}
+              onChangeText={(val) => setForm({ ...form, password: val })}
             />
             
             <Button 
@@ -77,11 +88,13 @@ export default function LoginScreen() {
 
         </ScrollView>
 
-        {/* Footer */}
+        {/* Footer - TU LINK DE REGISTRO */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>¿No tienes cuenta? </Text>
           <Link href="/(auth)/register" asChild>
-            <Text style={styles.footerLink}>Regístrate</Text>
+            <TouchableOpacity>
+              <Text style={styles.footerLink}>Regístrate</Text>
+            </TouchableOpacity>
           </Link>
         </View>
 
@@ -101,7 +114,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: SIZES.lg,
-    paddingTop: SIZES.xl * 2,
+    paddingTop: SIZES.xl * 1.5, // Ajustado ligeramente para mejor vista
     paddingBottom: SIZES.xl,
   },
   header: {

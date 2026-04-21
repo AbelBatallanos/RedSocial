@@ -1,226 +1,271 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Bell, MoreHorizontal, MapPin } from 'lucide-react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image, Platform } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { COLORS, SIZES, globalStyles } from '../../src/styles/theme';
-import { Avatar } from '../../src/components/ui/Avatar';
-import { PostCard } from '../../src/components/feed/PostCard';
+import { Button } from '../../src/components/ui/Button';
 
 export default function UserProfileScreen() {
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
   const { username } = useLocalSearchParams();
+  const router = useRouter();
+  
+  // Estado para el botón de seguir
+  const [isFollowing, setIsFollowing] = useState(false);
+  
+  // Datos simulados (esto vendrá del backend después)
+  const baseFollowers = 1240;
+  const followersCount = isFollowing ? baseFollowers + 1 : baseFollowers;
 
-  // Mock de datos del usuario
-  const user = {
-    name: 'Ana García',
-    username: username || 'anagarcia_99',
-    bio: 'Amante del buen café y las películas independientes. Recomiendo lo que me gusta. 📍 Santa Cruz.',
-    stats: { followers: '1,245', following: '850', posts: '124' },
-    avatar: 'https://api.dicebear.com/7.x/avataaars/png?seed=ana'
+  const toggleFollow = () => {
+    setIsFollowing(!isFollowing);
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <ArrowLeft size={24} stroke={COLORS.textPrimary} />
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.headerNav}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconCircle}>
-            <Bell size={20} stroke={COLORS.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconCircle}>
-            <MoreHorizontal size={20} stroke={COLORS.textPrimary} />
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.headerTitle}>@{username}</Text>
+        <View style={{ width: 40 }} /> 
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Profile Info */}
-        <View style={styles.profileInfo}>
-          <View style={styles.topRow}>
-            <View style={styles.textInfo}>
-              <Text style={styles.name}>{user.name}</Text>
-              <Text style={styles.username}>@{user.username}</Text>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Perfil Header */}
+        <View style={styles.profileHeader}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatarGradient}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarInitial}>{(username as string)?.[0]?.toUpperCase() || 'U'}</Text>
+              </View>
             </View>
-            <Avatar source={user.avatar} name={user.name} size={90} />
           </View>
-
-          <Text style={styles.bio}>{user.bio}</Text>
           
-          <TouchableOpacity style={styles.statsRow}>
-            <Text style={styles.statsText}>
-              <Text style={styles.bold}>{user.stats.followers}</Text> seguidores
-            </Text>
-          </TouchableOpacity>
+          <Text style={styles.fullName}>Diego Fernández</Text>
+          <Text style={styles.bio}>Amante del café y las buenas recomendaciones. Explorando el mundo un lugar a la vez. ☕️📍</Text>
 
-          <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.followBtn}>
-              <Text style={styles.followBtnText}>Seguir</Text>
+          {/* Stats */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{followersCount}</Text>
+              <Text style={styles.statLabel}>Seguidores</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>842</Text>
+              <Text style={styles.statLabel}>Siguiendo</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>124</Text>
+              <Text style={styles.statLabel}>Recoms</Text>
+            </View>
+          </View>
+
+          {/* Botón de Seguir Interactivo */}
+          <View style={styles.actionsContainer}>
+            <TouchableOpacity 
+              style={[
+                styles.followButton, 
+                isFollowing && styles.followingButtonActive
+              ]} 
+              onPress={toggleFollow}
+              activeOpacity={0.8}
+            >
+              <Text style={[
+                styles.followButtonText,
+                isFollowing && styles.followingButtonTextActive
+              ]}>
+                {isFollowing ? 'Siguiendo' : 'Seguir'}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.mentionBtn}>
-              <Text style={styles.mentionBtnText}>Mencionar</Text>
+
+            <TouchableOpacity style={styles.messageButton}>
+              <Text style={styles.messageButtonText}>Mensaje</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Tabs */}
-        <View style={styles.tabs}>
-          <TouchableOpacity style={[styles.tab, styles.activeTab]}>
-            <Text style={[styles.tabText, styles.activeTabText]}>Recomendaciones</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.tab}>
-            <Text style={styles.tabText}>Listas</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* User Posts */}
-        <View style={styles.feed}>
-          <PostCard 
-            user={{ name: user.name, username: user.username, avatar: user.avatar }}
-            time="2 h"
-            title="La Esquina del Sabor"
-            content="Comida mediterránea increíble. Tienen que probar la paella."
-            stats={{ likes: 45, comments: 12 }}
-          />
+        {/* Sección de Recomendaciones (Placeholder) */}
+        <View style={styles.contentSection}>
+          <Text style={styles.sectionTitle}>Recomendaciones de {username}</Text>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>📜</Text>
+            <Text style={styles.emptyText}>Aún no hay recomendaciones públicas.</Text>
+          </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
+  headerNav: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: SIZES.md,
-    height: 64,
+    paddingVertical: SIZES.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  backBtn: {
+  backButton: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
     borderRadius: 20,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    gap: SIZES.sm,
-  },
-  iconCircle: {
-    width: 40,
-    height: 40,
     backgroundColor: COLORS.surface,
-    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  profileInfo: {
-    padding: SIZES.lg,
+  backIcon: {
+    fontSize: 20,
+    color: COLORS.textPrimary,
   },
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  profileHeader: {
     alignItems: 'center',
+    paddingVertical: SIZES.xl,
+    paddingHorizontal: SIZES.lg,
+  },
+  avatarContainer: {
     marginBottom: SIZES.md,
   },
-  textInfo: {
-    flex: 1,
+  avatarGradient: {
+    padding: 3,
+    borderRadius: 60,
+    backgroundColor: COLORS.primary,
   },
-  name: {
-    fontSize: 28,
-    fontWeight: '900',
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: COLORS.background,
+  },
+  avatarInitial: {
+    fontSize: 40,
+    fontWeight: 'bold',
     color: COLORS.textPrimary,
   },
-  username: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
+  fullName: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    marginBottom: SIZES.xs,
   },
   bio: {
-    fontSize: 15,
-    color: COLORS.textPrimary,
-    lineHeight: 22,
-    fontWeight: '500',
-    marginTop: SIZES.sm,
-  },
-  statsRow: {
-    marginTop: SIZES.md,
-  },
-  statsText: {
     fontSize: 14,
     color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: SIZES.lg,
   },
-  bold: {
-    fontWeight: '900',
+  statsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    paddingVertical: SIZES.md,
+    paddingHorizontal: SIZES.xl,
+    borderRadius: SIZES.radiusLg,
+    marginBottom: SIZES.xl,
+    width: '100%',
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '700',
     color: COLORS.textPrimary,
   },
-  actionRow: {
-    flexDirection: 'row',
-    marginTop: SIZES.xl,
-    gap: SIZES.md,
+  statLabel: {
+    fontSize: 12,
+    color: COLORS.textTertiary,
+    marginTop: 2,
   },
-  followBtn: {
+  statDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: COLORS.border,
+    marginHorizontal: SIZES.sm,
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    gap: SIZES.md,
+    width: '100%',
+  },
+  followButton: {
     flex: 1,
     height: 48,
-    backgroundColor: COLORS.textPrimary,
-    borderRadius: 14,
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  followBtnText: {
-    color: COLORS.background,
-    fontSize: 15,
-    fontWeight: '900',
+  followingButtonActive: {
+    backgroundColor: COLORS.surfaceAlt,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  mentionBtn: {
+  followButtonText: {
+    color: COLORS.surface,
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  followingButtonTextActive: {
+    color: COLORS.textPrimary,
+  },
+  messageButton: {
     flex: 1,
     height: 48,
     backgroundColor: COLORS.surface,
-    borderRadius: 14,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  mentionBtnText: {
+  messageButtonText: {
     color: COLORS.textPrimary,
+    fontWeight: '700',
     fontSize: 15,
-    fontWeight: '900',
   },
-  tabs: {
-    flexDirection: 'row',
-    paddingHorizontal: SIZES.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+  contentSection: {
+    paddingHorizontal: SIZES.lg,
+    paddingBottom: 100,
   },
-  tab: {
-    paddingVertical: 16,
-    marginRight: SIZES.xl,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SIZES.lg,
   },
-  activeTab: {
-    borderBottomColor: COLORS.textPrimary,
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: SIZES.xl,
+    backgroundColor: COLORS.surface,
+    borderRadius: SIZES.radiusLg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderStyle: 'dashed',
   },
-  tabText: {
-    fontSize: 15,
-    fontWeight: '800',
+  emptyEmoji: {
+    fontSize: 32,
+    marginBottom: SIZES.sm,
+  },
+  emptyText: {
     color: COLORS.textTertiary,
+    fontSize: 14,
   },
-  activeTabText: {
-    color: COLORS.textPrimary,
-  },
-  feed: {
-    paddingTop: SIZES.lg,
-  }
 });

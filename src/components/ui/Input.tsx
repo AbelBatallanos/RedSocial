@@ -1,58 +1,29 @@
-import React, { useState } from 'react';
-import { View, TextInput, Text, StyleSheet, TextInputProps, TouchableOpacity } from 'react-native';
+import React from 'react';
+import { View, TextInput, Text, StyleSheet, TextInputProps } from 'react-native';
 import { COLORS, SIZES } from '../../styles/theme';
 
 interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
-  icon?: React.ReactNode;
+  isPassword?: boolean;
 }
 
-export const Input = ({
-  label,
-  error,
-  icon,
-  secureTextEntry,
-  style,
-  ...props
-}: InputProps) => {
-  const [isFocused, setIsFocused] = useState(false);
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-
-  const isPassword = secureTextEntry !== undefined;
-
+export const Input = ({ label, error, isPassword, style, ...props }: InputProps) => {
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <View
-        style={[
-          styles.inputContainer,
-          isFocused && styles.inputFocused,
-          error && styles.inputError,
-          style,
-        ]}
-      >
-        {icon && <View style={styles.iconContainer}>{icon}</View>}
-        
+      <View style={[
+        styles.inputWrapper,
+        error ? styles.inputError : null,
+      ]}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, style]}
           placeholderTextColor={COLORS.textTertiary}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          secureTextEntry={isPassword ? !isPasswordVisible : false}
+          secureTextEntry={isPassword}
+          autoCorrect={false} // Evita sugerencias que a veces cierran el teclado
+          spellCheck={false}
           {...props}
         />
-
-        {isPassword && (
-          <TouchableOpacity
-            style={styles.eyeIcon}
-            onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-          >
-            <Text style={{ color: COLORS.textTertiary }}>
-              {isPasswordVisible ? 'Ocultar' : 'Ver'}
-            </Text>
-          </TouchableOpacity>
-        )}
       </View>
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
@@ -66,47 +37,33 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: COLORS.textPrimary,
     marginBottom: SIZES.xs,
   },
-  inputContainer: {
+  inputWrapper: {
+    height: 56,
+    backgroundColor: COLORS.background, // Mantenemos tu color de fondo
+    borderRadius: SIZES.md,
+    borderWidth: 1.5,
+    borderColor: COLORS.background, // Borde sutil por defecto
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background, // Sutil fondo para el input
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: SIZES.radiusMd,
-    height: 56,
     paddingHorizontal: SIZES.md,
+    // Eliminamos sombras dinámicas aquí para evitar el error del teclado
   },
-  inputFocused: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.surface,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+  input: {
+    flex: 1,
+    color: COLORS.textPrimary,
+    fontSize: 16,
   },
   inputError: {
     borderColor: COLORS.error,
   },
-  iconContainer: {
-    marginRight: SIZES.sm,
-  },
-  input: {
-    flex: 1,
-    height: '100%',
-    color: COLORS.textPrimary,
-    fontSize: 16,
-  },
-  eyeIcon: {
-    padding: SIZES.xs,
-  },
   errorText: {
     color: COLORS.error,
     fontSize: 12,
-    marginTop: SIZES.xs,
+    marginTop: 4,
+    marginLeft: 4,
   },
 });
