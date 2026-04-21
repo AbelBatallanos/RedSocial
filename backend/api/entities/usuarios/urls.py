@@ -4,7 +4,7 @@ from .views import RegisterView, LogoutView, ListUsuarioView, MiPerfil
 
 urlpatterns = [
 
-    path('usuarios/', ListUsuarioView.as_view(), name='usuarios'),
+    path('todos/', ListUsuarioView.as_view(), name='usuarios'),
     path('miperfil/', MiPerfil.as_view(), name='usuarios'),
     path('login/', TokenObtainPairView.as_view(), name='login'),   
     # --- REGISTER ---
