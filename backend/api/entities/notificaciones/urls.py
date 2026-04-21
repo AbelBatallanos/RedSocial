@@ -3,7 +3,7 @@ from .views import NotificacionViewSet, NotificacionListView, NotificacionModVie
 
 
 urlpatterns = [
-    path("mine/", NotificacionListView.as_view())
-    path("<uuid:id_notif>/", NotificacionModView.as_view())
+    path("mine/", NotificacionListView.as_view()),
+    path("<uuid:id_notificacion>/", NotificacionModView.as_view())
 ]
 

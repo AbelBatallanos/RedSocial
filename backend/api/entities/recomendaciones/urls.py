@@ -20,6 +20,6 @@ urlpatterns = [
     path('usuario/<uuid:id_usuario>/', VerRecomendacionView.as_view(), name='ver_perfil_usuario'),
     
     # Compartir y ver recibidas
-    path('<uuid:id_recomendacion>/compartir/', CompartirRecomendacionView.as_view(), name='compartir_recomendacion'),
+    path('<str:id_recomendacion>/compartir/', CompartirRecomendacionView.as_view(), name='compartir_recomendacion'),
     path('<uuid:id_recomendacion>/recibidas/', VerRecomendacionCompartidaView.as_view(), name='ver_recibidas'),
 ]
