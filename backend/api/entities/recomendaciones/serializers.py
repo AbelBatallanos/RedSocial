@@ -47,17 +47,16 @@ class RecomendacionSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'autor', 'estado', 'creado_en']
 
-
-     # Validación por campo más específica (mensajes dinámicos)
-    # def validate_titulo(self, value):
-    #     if any(char.isdigit() for char in value):
-    #         raise serializers.ValidationError('El título no puede contener números.')
-    #     return value
-
     def validate_visibilidad(self, value):
         allowed = [choice[0] for choice in RecomendacionVisibilidad.choices]
         if value not in allowed:
             raise serializers.ValidationError('Visibilidad inválida. Debe ser: ' + ', '.join(allowed))
+        return value
+    
+    def validate_tipo(self, value):
+        allowed = [choice[0] for choice in RecomendacionTipo.choices]
+        if value not in allowed:
+            raise serializers.ValidationError('Tipo inválido. Debe ser: ' + ', '.join(allowed))
         return value
 
 class CompartidoSerializer(serializers.ModelSerializer):
