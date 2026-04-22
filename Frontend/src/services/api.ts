@@ -103,6 +103,44 @@ export const obtenerTodosLosUsuarios = async (token: string) => {
 };
 
 // ==========================================
+// 5. PERFIL DE USUARIO
+// ==========================================
+export const actualizarPerfil = async (
+  token: string, 
+  datos: { nombre_usuario?: string, biografia?: string, fecha_nacimiento?: string }, 
+  imageUri?: string | null
+) => {
+  try {
+    const formData = new FormData();
+    
+    if (datos.nombre_usuario) formData.append('nombre_usuario', datos.nombre_usuario);
+    if (datos.biografia) formData.append('biografia', datos.biografia);
+    if (datos.fecha_nacimiento) formData.append('fecha_nacimiento', datos.fecha_nacimiento);
+
+    if (imageUri) {
+      const filename = imageUri.split('/').pop() || 'avatar.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : `image/jpeg`;
+      // @ts-ignore
+      formData.append('avatar', { uri: imageUri, name: filename, type });
+    }
+
+    const response = await fetch(`${API_URL}/usuarios/miperfil/`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData
+    });
+
+    const data = await response.json();
+    return response.ok ? { success: true, data } : { success: false, error: data };
+  } catch (error) {
+    return { success: false, error: 'Error de red al actualizar' };
+  }
+};
+
+// ==========================================
 // 2. RECOMENDACIONES
 // ==========================================
 
@@ -171,6 +209,59 @@ export const crearRecomendacion = async (token: string, datos: any, imageUri: st
     return response.ok ? { success: true, data } : { success: false, error: data };
   } catch (error) {
     return { success: false, error: 'Error de conexión al crear' };
+  }
+};
+
+export const actualizarRecomendacion = async (token: string, id: string, datos: any, imageUri?: string | null) => {
+  try {
+    const formData = new FormData();
+    if (datos.titulo) formData.append('titulo', datos.titulo);
+    if (datos.descripcion) formData.append('descripcion', datos.descripcion);
+    if (datos.tipo) formData.append('tipo', datos.tipo);
+    if (datos.visibilidad) formData.append('visibilidad', datos.visibilidad);
+
+    if (imageUri && !imageUri.startsWith('http')) {
+      const filename = imageUri.split('/').pop();
+      const match = /\.(\w+)$/.exec(filename || '');
+      const type = match ? `image/${match[1]}` : `image`;
+      // @ts-ignore
+      formData.append('imagen', { uri: imageUri, name: filename, type });
+    }
+
+    const response = await fetch(`${API_URL}/recomendaciones/${id}/`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+      },
+      body: formData, 
+    });
+
+    const data = await response.json();
+    return response.ok ? { success: true, data } : { success: false, error: data };
+  } catch (error) {
+    return { success: false, error: 'Error al actualizar' };
+  }
+};
+
+export const eliminarRecomendacion = async (token: string, id: string) => {
+  try {
+    const response = await fetch(`${API_URL}/recomendaciones/${id}/`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+      },
+    });
+
+    if (response.status === 204 || response.ok) {
+      return { success: true };
+    } else {
+      const data = await response.json();
+      return { success: false, error: data };
+    }
+  } catch (error) {
+    return { success: false, error: 'Error de conexión al eliminar' };
   }
 };
 
