@@ -1,13 +1,13 @@
+import uuid
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from django.db import transaction
-
-from api.models import Recomendacion, Usuario, Notificacion, Compartido
+from django.db import transaction, IntegrityError
+from api.models import Recomendacion, Usuario, Notificacion, Compartido, Amistad
 from .serializers import RecomendacionSerializer, CompartidoSerializer, CompartidoConOtroSerializer, UsuarioMinSerializer
 from rest_framework.parsers import MultiPartParser, FormParser
-
+from django.db.models import Q
 
 class CrearRecomendacionView(APIView):
 
@@ -105,14 +105,23 @@ class VerRecomendacionCompartidaView(APIView):
 
 # class VerTodasRecomendacionesCompartidas
 class EditOrDeletRecomendacionView(APIView):
+    
+    parser_classes = (MultiPartParser, FormParser)
     def put(self, request, id_recomendacion):
-        recomendacion = get_object_or_404(Recomendacion, id=id_recomendacion, estado="creado")
-
+        
+        try:
+          validated_recomend= uuid.UUID(str(id_recomendacion))
+          recomendacion = Recomendacion.objects.get(id=validated_recomend, estado="creado")
+        except Recomendacion.DoesNotExist:
+            return Response({"error": "no existe la recomendacion dada"}, status=404)
+        except Exception:
+          return Response({"error": " no es un UUID válido"}, status=status.HTTP_400_BAD_REQUEST)
+    
         if request.user != recomendacion.autor:
-            return Response({"error": "No eres el autor de esta publicación"}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"error": "No tienes permisos para modificar este registro"}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = RecomendacionSerializer(recomendacion, data=request.data, partial=True)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response({"mensaje": "Actualizado con éxito", "data": serializer.data}, status=status.HTTP_200_OK)
             
@@ -126,54 +135,93 @@ class EditOrDeletRecomendacionView(APIView):
         
         # Soft Delete: Solo cambiamos el estado, no la borramos de la DB
         recomendacion.estado = "eliminado"
-        recomendacion.save()
+        recomendacion.save(update_fields=['estado'])
 
         return Response({"mensaje": "Eliminado con éxito"}, status=status.HTTP_200_OK)
 
 
+class ObternerRecomendacionesView(APIView):
+    def get(self, request):
+        
+        recomendaciones = Recomendacion.objects.filter(visibilidad="public")
+        serial = RecomendacionSerializer(recomendaciones, many=True)
+        return Response(serial.data, status=200)
+
+
 class CompartirRecomendacionView(APIView):
-    def post(self, request, id_recomendacion):
+     def post(self, request, id_recomendacion):
         amigos_ids = request.data.get('amigos_ids', [])
+
+        try:
+            id_recomendacion_uuid = uuid.UUID(str(id_recomendacion))
+        except Exception:
+            return Response({"error": "id_recomendacion no es un UUID válido"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not isinstance(amigos_ids, list) or not amigos_ids:
+            return Response({"error": "Debes proveer una lista de amigos con este atributo: 'amigos_ids'':''['idUsuario','idUsuario'.....]' "}, status=400)
+
+        recomendacion = Recomendacion.objects.get( id=id_recomendacion_uuid, estado="creado")
+        if not recomendacion:
+            return Response({"error": "no existe la recomendacion dada"}, status=404)
         
-        if not amigos_ids:
-            return Response({"error": "Debes proveer una lista de amigos_ids"}, status=status.HTTP_400_BAD_REQUEST)
-            
-        recomendacion = get_object_or_404(Recomendacion, id=id_recomendacion, estado="creado")
+        # validar UUIDs
+        valid_uuids = []
+        invalid = []
+        for raw in amigos_ids:
+            try:
+                valid_uuids.append(uuid.UUID(str(raw)))
+            except Exception:
+                invalid.append(raw)
+        if invalid:
+            return Response({"error": "IDs inválidos", "invalid": invalid}, status=400)
+
+        usuarios = Usuario.objects.filter(id__in=valid_uuids )
+        if not usuarios.exists():
+            return Response({"mensaje": "No se encontraron amigos con esos IDs"}, status=404)
+
+        mis_amigos = []
+        noson_amigo = []
+        for user in usuarios:
+            es_amigo = Amistad.objects.filter(estado="accepted").filter( Q(usuario=request.user, amigo=user) |
+                Q(amigo=request.user, usuario=user)).exists() 
+            if es_amigo:
+                mis_amigos.append(user)
+            else:
+                noson_amigo.append(user.id)
         
-        # Usamos transaction.atomic para asegurar que si falla Notificacion, tampoco se guarde el Compartido
+        if noson_amigo:
+            return Response({
+                "error": "Algunos IDs no son válidos para compartir",
+                "message": "Solo puedes compartir con amigos"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        to_create_compartidos = []
+        to_create_notifs = []
+        
+        for user in usuarios:
+            to_create_compartidos.append(Compartido(
+                    recomendacion=recomendacion,  # instancia OK
+                    emisor=request.user,
+                    receptor=user
+                ))
+            to_create_notifs.append(Notificacion(
+                user_destino=user,
+                tipo="compartido",
+                payload_json={
+                    "emisor_nombre": request.user.nombre_usuario,
+                    "recomendacion_titulo": recomendacion.titulo,
+                    "recomendacion_id": str(recomendacion.id),
+                }
+            ))
         try:
             with transaction.atomic():
-                compartidos = []
-                notificaciones = []
-                
-                # Para evitar problemas con IDs que no existen, podrías validar los amigos_ids aquí
-                usuarios_amigos = Usuario.objects.filter(id__in=amigos_ids)
-                
-                for amigo in usuarios_amigos:
-                    # 1. Crear el registro en el historial Compartido
-                    compartidos.append(Compartido(
-                        recomendacion=recomendacion.id,
-                        emisor=request.user,
-                        receptor=amigo.id
-                    ))
-                    
-                    # 2. Crear la Notificación
-                    notificaciones.append(Notificacion(
-                        user_destino=amigo,
-                        tipo="compartido",
-                        payload_json={
-                            "emisor_nombre": request.user.nombre_usuario,
-                            "recomendacion_titulo": recomendacion.titulo,
-                            "recomendacion_id": recomendacion.id,
-                            "mensaje": request.data.get('mensaje_opcional', '')
-                        }
-                    ))
-                
-                # bulk_create ejecuta todo rápido
-                Compartido.objects.bulk_create(compartidos)
-                Notificacion.objects.bulk_create(notificaciones)
-                
-                return Response({"mensaje": f"Compartido con éxito a {len(usuarios_amigos)} amigos"}, status=status.HTTP_201_CREATED)
-            
+                created_comp = Compartido.objects.bulk_create(to_create_compartidos) if to_create_compartidos else []
+                created_notif = Notificacion.objects.bulk_create(to_create_notifs) if to_create_notifs else []
+            return Response({
+                "mensaje": f"Compartido con éxito a {len(created_comp)} amigos",
+                "omitidos_por_existencia": len(usuarios) - len(created_comp)
+            }, status=201)
+        except IntegrityError as e:
+            return Response({"error": "Error de integridad: " + str(e)}, status=500)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": str(e)}, status=500)

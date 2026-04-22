@@ -41,25 +41,22 @@ class SolicitarAmistadView(APIView):
 
         # Transacción para evitar condiciones de carrera
         with transaction.atomic():
-            # 1) ¿ya existe exactamente la misma relación (yo -> amigo) en cualquier estado?
-             # ¿Existe relación en la misma dirección con estado pending o accepted?
+
             existe_misma = Amistad.objects.filter(
                 Q(usuario=usuario, amigo=amigo) &
                 (Q(estado='pending') | Q(estado='accepted'))
             ).exists()
 
-            # ¿Existe la relación inversa (amigo -> usuario) con pending o accepted?
             existe_inversa = Amistad.objects.filter(
                 Q(usuario=amigo, amigo=usuario) &
                 (Q(estado='pending') | Q(estado='accepted'))
             ).exists()
 
             if existe_misma or existe_inversa:
-                return JsonResponse({"error": "Ya existe una solicitud o relación entre estos usuarios"}, status=status.HTTP_400_BAD_REQUEST)
-            # 3) No existe ninguna relación: crear nueva solicitud pendiente
+                return JsonResponse({"error": "Ya existe una solicitud o relación con este usuario"}, status=status.HTTP_400_BAD_REQUEST)
+
             nueva = Amistad.objects.create(usuario=usuario, amigo=amigo, estado='pending')
 
-            # 4) Crear notificación para el destinatario (amigo)
             Notificacion.objects.create(
                 user_destino=amigo,
                 tipo='friend_request',
