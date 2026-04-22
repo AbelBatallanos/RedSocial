@@ -1,23 +1,47 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, Alert, ActivityIndicator} from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { Button } from '../../src/components/ui/Button';
 import { Input } from '../../src/components/ui/Input';
 import { COLORS, SIZES, globalStyles } from '../../src/styles/theme';
 
+import { useAuthContext } from '../../src/context/AuthContext';
+import { loginUsuario } from '../../src/services/api';
+
 export default function LoginScreen() {
   const router = useRouter();
-  
+  const { login } = useAuthContext();
+
   // Agrupamos el estado para evitar re-renders innecesarios que cierran el teclado
   const [form, setForm] = useState({
-    email: '',
+    correo: '',
     password: ''
   });
 
-  const handleLogin = () => {
-    // Aquí irá la lógica de autenticación real
-    router.push('/(auth)/interests');
-  };
+  const [loading, setLoading] = useState(false); 
+
+ const handleLogin = async () => {
+  if (!form.correo || !form.password) {
+    Alert.alert('Atención', 'Ingresa correo y contraseña.');
+    return;
+  }
+
+  console.log("🚀 Enviando al Backend -> User:", form.correo, "| Pass:", form.password);
+  setLoading(true);
+
+  const result = await loginUsuario(form.correo, form.password);
+  setLoading(false);
+
+  if (result.success) {
+    console.log("✅ Login OK. User Data:", result.data.user);
+    // Cambiamos 'correo' por 'nombre_usuario' para ser consistentes con el backend
+    login(result.data.access, result.data.user || { nombre_usuario: form.correo });
+    router.replace('/(auth)/interests');
+  } else {
+    console.log("❌ Error en Login:", result.error);
+    Alert.alert('Error de Login', result.error);
+  }
+};
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -42,35 +66,16 @@ export default function LoginScreen() {
             </View>
             <Text style={styles.title}>Bienvenido a{'\n'}RecTrack.</Text>
             <Text style={styles.subtitle}>Tus amigos confían en tus gustos.</Text>
-          </View>
-
-          {/* Social Auth - TU BOTÓN DE GOOGLE */}
-          <View style={styles.socialAuth}>
-            <Button 
-              title="Continuar con Google" 
-              variant="outline"
-              onPress={() => {}}
-              style={styles.googleButton}
-              icon={<Text style={{ fontSize: 18, marginRight: 8, fontWeight: 'bold' }}>G</Text>}
-            />
-          </View>
-
-          {/* Divider - TU SEPARADOR */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>O USA TU EMAIL</Text>
-            <View style={styles.dividerLine} />
-          </View>
+          </View>         
 
           {/* Form - TUS INPUTS CON FIX */}
           <View style={styles.formContainer}>
             <Input
-              placeholder="Correo electrónico"
-              keyboardType="email-address"
+              placeholder="Nombre de usuario"
               autoCapitalize="none"
-              value={form.email}
+              value={form.correo}
               // Actualizamos el estado del objeto de forma limpia
-              onChangeText={(val) => setForm({ ...form, email: val })}
+              onChangeText={(val) => setForm({ ...form, correo: val })}
             />
             <Input
               placeholder="Contraseña"
@@ -80,9 +85,28 @@ export default function LoginScreen() {
             />
             
             <Button 
-              title="Iniciar sesión" 
+              title={loading ? "" : "Iniciar sesión"} 
               onPress={handleLogin}
               style={styles.loginButton}
+              disabled={loading}
+              icon={loading ? <ActivityIndicator color={COLORS.surface} /> : null}
+            />
+          </View>
+          
+          {/* Divider - TU SEPARADOR */}
+          <View style={styles.dividerContainer}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>O CONTINUA CON GOOGLE</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <View style={styles.socialAuth}>
+            <Button 
+              title="Continuar con Google" 
+              variant="outline"
+              onPress={() => {}}
+              style={styles.googleButton}
+              icon={<Text style={{ fontSize: 18, marginRight: 8, fontWeight: 'bold' }}>G</Text>}
             />
           </View>
 
