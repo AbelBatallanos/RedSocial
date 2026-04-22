@@ -42,7 +42,7 @@ class RecomendacionSerializer(serializers.ModelSerializer):
         model = Recomendacion
         fields = [
             'id', 'autor_detalle', 'tipo', 'titulo', 
-            'descripcion', 'imagen', 'enlace_externo', 'visibilidad', 
+            'descripcion', 'imagen', 'enlace_externo', 'visibilidad', 'creado_en',
             
         ]
         read_only_fields = ['id', 'autor', 'estado', 'creado_en']
