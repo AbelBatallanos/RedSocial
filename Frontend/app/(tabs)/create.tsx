@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert, ActivityIndicator, Image, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, ChevronDown, MapPin, Star, Image as ImageIcon, Tag, Eye, EyeOff, Link as LinkIcon, Film, Book, Tv, MoreHorizontal } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
-import { COLORS, SIZES, globalStyles } from '../../src/styles/theme';
+import { COLORS, SIZES } from '../../src/styles/theme';
 import { Avatar } from '../../src/components/ui/Avatar';
 import { useAuthContext } from '../../src/context/AuthContext';
-import { crearRecomendacion } from '../../src/services/api';
+// AÑADIMOS actualizarRecomendacion
+import { crearRecomendacion, actualizarRecomendacion } from '../../src/services/api';
 
-// Definimos las categorías basadas estrictamente en tu modelo de Django
 const CATEGORIES = [
   { id: 'pelicula', label: 'Película', icon: Film },
   { id: 'libro', label: 'Libro', icon: Book },
@@ -24,7 +24,9 @@ export default function CreateScreen() {
   const router = useRouter();
   const { token, user } = useAuthContext();
 
-  // ESTADOS DEL FORMULARIO
+  // RECIBIMOS LOS PARÁMETROS SI VENIMOS DE "EDITAR"
+  const { isEditing, id, title, content, tipo, enlace, image } = useLocalSearchParams();
+
   const [loading, setLoading] = useState(false);
   const [showCatMenu, setShowCatMenu] = useState(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
@@ -32,14 +34,28 @@ export default function CreateScreen() {
   const [form, setForm] = useState({
     titulo: '',
     descripcion: '',
-    tipo: 'lugar', // Valor por defecto válido
+    tipo: 'lugar', 
     visibilidad: 'public',
     enlace_externo: '',
   });
   
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  // Seleccionar Imagen de la Galería
+  // SI ESTAMOS EDITANDO, RELLENAMOS EL FORMULARIO AUTOMÁTICAMENTE
+  useEffect(() => {
+    if (isEditing === 'true') {
+      setForm({
+        titulo: (title as string) || '',
+        descripcion: (content as string) || '',
+        tipo: (tipo as string) || 'lugar',
+        visibilidad: 'public',
+        enlace_externo: (enlace as string) || '',
+      });
+      if (enlace && enlace !== 'null') setShowLinkInput(true);
+      if (image && image !== 'null') setSelectedImage(image as string);
+    }
+  }, [isEditing]);
+
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -53,7 +69,6 @@ export default function CreateScreen() {
     }
   };
 
-  // Publicar a la API
   const handlePublish = async () => {
     if (!form.titulo || !form.descripcion) {
       Alert.alert('Atención', 'Por favor agrega un título y una descripción.');
@@ -61,50 +76,58 @@ export default function CreateScreen() {
     }
 
     setLoading(true);
-    // Usamos el servicio que ya tiene configurado el FormData
-    const result = await crearRecomendacion(token!, form, selectedImage);
+    let result;
+
+    // MAGIA AQUÍ: Decidimos si Creamos o Actualizamos
+    if (isEditing === 'true' && id) {
+      result = await actualizarRecomendacion(token!, id as string, form, selectedImage);
+    } else {
+      result = await crearRecomendacion(token!, form, selectedImage);
+    }
+    
     setLoading(false);
 
     if (result.success) {
-      Alert.alert('¡Éxito!', 'Tu recomendación ha sido publicada.');
+      Alert.alert('¡Éxito!', isEditing === 'true' ? 'Recomendación actualizada.' : 'Recomendación publicada.');
       router.replace('/(tabs)'); 
     } else {
       const errorMsg = typeof result.error === 'string' ? result.error : JSON.stringify(result.error);
-      Alert.alert('No se pudo publicar', errorMsg);
+      Alert.alert('Error', errorMsg);
     }
   };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* HEADER - MANTENIDO TU DISEÑO */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
           <X size={24} stroke={COLORS.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Nueva Recomendación</Text>
+        {/* Cambia el título si estás editando */}
+        <Text style={styles.headerTitle}>{isEditing === 'true' ? 'Editar Post' : 'Nueva Recomendación'}</Text>
         <TouchableOpacity 
           style={[styles.publishBtn, loading && { opacity: 0.7 }]} 
           onPress={handlePublish}
           disabled={loading}
         >
-          {loading ? <ActivityIndicator size="small" color={COLORS.surface} /> : <Text style={styles.publishBtnText}>Publicar</Text>}
+          {loading ? (
+            <ActivityIndicator size="small" color={COLORS.surface} />
+          ) : (
+            <Text style={styles.publishBtnText}>{isEditing === 'true' ? 'Guardar' : 'Publicar'}</Text>
+          )}
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* FILA DE USUARIO - DINÁMICO */}
         <View style={styles.userRow}>
           <Avatar name={user?.nombre_usuario || "Usuario"} size={56} />
           <View style={styles.userText}>
             <Text style={styles.userName}>{user?.nombre_usuario || "Tú"}</Text>
             <View style={styles.settingsRow}>
-              {/* PICKER DE CATEGORÍA (MIRA EL MODELO) */}
               <TouchableOpacity style={styles.miniPicker} onPress={() => setShowCatMenu(!showCatMenu)}>
                 <Text style={styles.miniPickerText}># {form.tipo.toUpperCase()}</Text>
                 <ChevronDown size={12} stroke={COLORS.primary} />
               </TouchableOpacity>
               
-              {/* SELECTOR DE VISIBILIDAD (PUBLIC/PRIVATE) */}
               <TouchableOpacity 
                 style={styles.miniPicker} 
                 onPress={() => setForm({...form, visibilidad: form.visibilidad === 'public' ? 'private' : 'public'})}
@@ -118,7 +141,6 @@ export default function CreateScreen() {
           </View>
         </View>
 
-        {/* MENÚ DESPLEGABLE DE CATEGORÍAS */}
         {showCatMenu && (
           <View style={styles.catGrid}>
             {CATEGORIES.map((cat) => (
@@ -137,7 +159,6 @@ export default function CreateScreen() {
           </View>
         )}
 
-        {/* INPUT DE TÍTULO */}
         <TextInput
           style={styles.titleInput}
           placeholder="¿Qué recomiendas?"
@@ -146,7 +167,6 @@ export default function CreateScreen() {
           onChangeText={(val) => setForm({...form, titulo: val})}
         />
 
-        {/* INPUT DE DESCRIPCIÓN */}
         <TextInput
           style={styles.textInput}
           placeholder="Cuéntale a tus amigos por qué te gusta..."
@@ -156,7 +176,6 @@ export default function CreateScreen() {
           onChangeText={(val) => setForm({...form, descripcion: val})}
         />
 
-        {/* INPUT OPCIONAL DE ENLACE EXTERNO */}
         {showLinkInput && (
           <View style={styles.linkContainer}>
             <LinkIcon size={18} stroke={COLORS.primary} />
@@ -171,7 +190,6 @@ export default function CreateScreen() {
           </View>
         )}
 
-        {/* VISTA PREVIA DE IMAGEN */}
         {selectedImage && (
           <View style={styles.imagePreviewContainer}>
             <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
@@ -181,14 +199,13 @@ export default function CreateScreen() {
           </View>
         )}
 
-        {/* FOOTER ICONS - INTEGRADOS CON LÓGICA */}
         <View style={styles.footerIcons}>
           <TouchableOpacity style={styles.iconBtn} onPress={pickImage}>
             <ImageIcon size={28} stroke={selectedImage ? COLORS.primary : COLORS.textSecondary} />
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.iconBtn} onPress={() => setShowLinkInput(!showLinkInput)}>
-            <LinkIcon size={28} stroke={showLinkInput ? COLORS.primary : COLORS.textSecondary} />
+            <LinkIcon size={28} stroke={showLinkInput || form.enlace_externo ? COLORS.primary : COLORS.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.iconBtn}>

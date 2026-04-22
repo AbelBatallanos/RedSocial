@@ -15,19 +15,23 @@ interface PostCardProps {
   time: string;
   title: string;
   content: string;
-  image?: string | null; // Aceptamos null del backend
-  enlace_externo?: string | null; // Nuevo
-  tipo?: string; // Nuevo (pelicula, libro, etc)
+  image?: string | null; 
+  enlace_externo?: string | null; 
+  tipo?: string; 
   stats: {
     likes: number;
     comments: number;
   };
   isRecommendation?: boolean;
+  // NUEVAS PROPS PARA EDITAR/ELIMINAR
+  isMyPost?: boolean;
+  onOptionsPress?: () => void;
 }
 
 export const PostCard = ({ 
   id = '1', user, time, title, content, image, stats, 
-  isRecommendation = true, enlace_externo, tipo 
+  isRecommendation = true, enlace_externo, tipo,
+  isMyPost, onOptionsPress // <-- Recibimos las props aquí
 }: PostCardProps) => {
   const router = useRouter();
 
@@ -57,9 +61,14 @@ export const PostCard = ({
           </View>
           <Text style={styles.username}>@{user.username} • {time}</Text>
         </View>
-        <TouchableOpacity style={styles.moreBtn}>
-          <MoreHorizontal size={20} stroke={COLORS.textTertiary} />
-        </TouchableOpacity>
+        
+        {/* MAGIA AQUÍ: Solo muestra los 3 puntitos si es tu post */}
+        {/* AGREGA ESTE BLOQUE: Solo si es mi post, muestra los puntos */}
+        {isMyPost && (
+          <TouchableOpacity style={styles.moreBtn} onPress={onOptionsPress}>
+            <MoreHorizontal size={20} stroke={COLORS.textTertiary} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Body */}
@@ -113,6 +122,7 @@ export const PostCard = ({
   );
 };
 
+// ESTILOS INTACTOS
 const styles = StyleSheet.create({
   container: {
     backgroundColor: COLORS.surface,
