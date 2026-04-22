@@ -30,7 +30,7 @@ SECRET_KEY = 'django-insecure-&*ru^r3!l!z957-^-bkwoi)ofm*xlpl9t_6u%sr^w5dvsw*65$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'testserver']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'testserver', '192.168.1.12']
 
 
 # Application definition
@@ -86,11 +86,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME'),        
-        'USER': os.environ.get('DB_USER'),        
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': 'db',                              
-        'PORT': os.environ.get('DB_PORT', '5432'),
+        'NAME': 'tracking_friends',
+        'USER': 'postgres',
+        'PASSWORD': 'root',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 

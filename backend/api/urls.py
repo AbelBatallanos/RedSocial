@@ -10,4 +10,6 @@ urlpatterns = [
     path("ranking-agregado/", include("api.entities.ranking_agregado.urls")),
     path("recomendaciones/", include("api.entities.recomendaciones.urls")),
     path("reacciones/", include("api.entities.reacciones.urls")),
+
+    # path('usuarios/buscar/', BuscarUsuarioView.as_view(), name='buscar-usuarios'),
 ]
