@@ -9,10 +9,7 @@ import { buscarUsuarios, enviarSolicitudAmistad, obtenerTodosLosUsuarios } from 
 import { useRouter } from 'expo-router';
 
 // MOCK FIJO (Para que siempre haya contenido)
-const MOCK_SUGGESTIONS = [
-  { id: 'mock-1', nombre_usuario: 'carlos_dev', avatar: 'https://api.dicebear.com/7.x/avataaars/png?seed=carlos' },
-  { id: 'mock-2', nombre_usuario: 'laura.ux', avatar: 'https://api.dicebear.com/7.x/avataaars/png?seed=laura' },
-];
+
 
 const POPULAR_SEARCHES = ['🍔 Comida', '📺 Series', '💻 Tech', '✈️ Viajes', '☕ Café'];
 
@@ -75,7 +72,7 @@ export default function SearchScreen() {
   };
 
   // Combinamos Mocks con DB para la lista de sugerencias
-  const allSuggestions = [...MOCK_SUGGESTIONS, ...dbUsers];
+  const allSuggestions = [ ...dbUsers];
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
