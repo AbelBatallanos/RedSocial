@@ -140,6 +140,14 @@ class EditOrDeletRecomendacionView(APIView):
         return Response({"mensaje": "Eliminado con éxito"}, status=status.HTTP_200_OK)
 
 
+class ObternerRecomendacionesView(APIView):
+    def get(self, request):
+        
+        recomendaciones = Recomendacion.objects.filter(visibilidad="public")
+        serial = RecomendacionSerializer(recomendaciones, many=True)
+        return Response(serial.data, status=200)
+
+
 class CompartirRecomendacionView(APIView):
      def post(self, request, id_recomendacion):
         amigos_ids = request.data.get('amigos_ids', [])
