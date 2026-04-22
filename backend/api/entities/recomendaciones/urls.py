@@ -5,7 +5,8 @@ from .views import (
     VerMisRecomendacionesView,
     VerRecomendacionCompartidaView,
     EditOrDeletRecomendacionView,
-    CompartirRecomendacionView
+    CompartirRecomendacionView,
+    ObternerRecomendacionesView
 )
 
 urlpatterns = [
@@ -22,4 +23,7 @@ urlpatterns = [
     # Compartir y ver recibidas
     path('<str:id_recomendacion>/compartir/', CompartirRecomendacionView.as_view(), name='compartir_recomendacion'),
     path('<uuid:id_recomendacion>/recibidas/', VerRecomendacionCompartidaView.as_view(), name='ver_recibidas'),
+
+    path('todos/', ObternerRecomendacionesView.as_view())
+
 ]
