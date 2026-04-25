@@ -29,3 +29,5 @@ class Suscripcion(TimeStampedModel):
         
     def __str__(self):
         return f"Suscripción de {self.user.nombre_usuario} - {self.estado}"
+    
+    

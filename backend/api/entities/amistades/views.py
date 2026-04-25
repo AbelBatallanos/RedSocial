@@ -70,7 +70,7 @@ class SolicitarAmistadView(APIView):
             )
 
             serializer = AmistadGetSerializer(nueva, context={'request': request})
-            return JsonResponse({"informacion": "Solicitud de amistad enviada","amistad":serializer.data}, status=status.HTTP_201_CREATED)
+            return JsonResponse({"message": "Solicitud de amistad enviada","amistad":serializer.data}, status=status.HTTP_201_CREATED)
 
 
 class ObtenerAmistadesPendientesView(APIView):
