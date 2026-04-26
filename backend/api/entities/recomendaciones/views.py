@@ -8,7 +8,11 @@ from api.models import Recomendacion, Usuario, Notificacion, Compartido, Amistad
 from .serializers import RecomendacionSerializer, CompartidoSerializer, CompartidoConOtroSerializer, UsuarioMinSerializer
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.db.models import Q
-from api.signals import _notify_user_notifications_changed
+from api.signals import _notify_user_notifications_changed, _notify_user_recomendaciones_changed
+
+
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 
 class CrearRecomendacionView(APIView):
@@ -19,13 +23,13 @@ class CrearRecomendacionView(APIView):
         
         # 1. Validar límite para usuarios no premium
         # Asegúrate de que has_premium exista en tu modelo Usuario o ajústalo a es_premium
-        if not getattr(user, 'has_premium', False): 
-            countRecomendaciones = Recomendacion.objects.filter(autor=user, estado="creado").count()
-            if countRecomendaciones >= 5:
-                return Response(
-                    {"error": "Ha excedido la cantidad máxima (5). Mejora a Premium."}, 
-                    status=status.HTTP_403_FORBIDDEN
-                )
+        # if not getattr(user, 'has_premium', False): 
+        #     countRecomendaciones = Recomendacion.objects.filter(autor=user, estado="creado").count()
+        #     if countRecomendaciones >= 5:
+        #         return Response(
+        #             {"error": "Ha excedido la cantidad máxima (5). Mejora a Premium."}, 
+        #             status=status.HTTP_403_FORBIDDEN
+        #         )
         
         # 2. Usar el Serializer para validar y guardar datos (incluyendo la imagen)
         # request.data automáticamente maneja archivos (imágenes) si la petición es multipart/form-data
@@ -36,7 +40,21 @@ class CrearRecomendacionView(APIView):
             data.setdefault("visibilidad", "public") #asignamos valores por defect si no hay datos 
             data.setdefault("tipo", "otro")
             # Pasamos el autor explícitamente al guardar
-            serializer.save(autor=user)
+           
+            nueva_recomend =  serializer.save(autor=user)
+
+            if nueva_recomend.visibilidad == "public":
+                def _broadcast(): 
+                    channel_layer = get_channel_layer()
+                    async_to_sync(channel_layer.group_send)(
+                        "recomendaciones_publicas_feed", # <--- EL MISMO NOMBRE ESTÁTICO
+                        {
+                            "type": "recomendaciones.refresh", # Llama al método en el Consumer
+                            "data": serializer.data 
+                        }
+                    )
+                transaction.on_commit(_broadcast)   
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
