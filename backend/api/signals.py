@@ -19,9 +19,9 @@ def _notify_user_notifications_changed(user_unique_id):
 
 @receiver(post_save, sender=Notificacion)
 def notify_on_notificacion_save(sender, instance, **kwargs):
-    _notify_user_notifications_changed(instance.user_destino.unique_id)
+    _notify_user_notifications_changed(instance.user_destino.id)
 
 
 @receiver(post_delete, sender=Notificacion)
 def notify_on_notificacion_delete(sender, instance, **kwargs):
-    _notify_user_notifications_changed(instance.user_destino.unique_id)
+    _notify_user_notifications_changed(instance.user_destino.id)

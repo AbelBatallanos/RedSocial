@@ -8,6 +8,8 @@ from api.models import Recomendacion, Usuario, Notificacion, Compartido, Amistad
 from .serializers import RecomendacionSerializer, CompartidoSerializer, CompartidoConOtroSerializer, UsuarioMinSerializer
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.db.models import Q
+from api.signals import _notify_user_notifications_changed
+
 
 class CrearRecomendacionView(APIView):
 
@@ -213,10 +215,23 @@ class CompartirRecomendacionView(APIView):
                     "recomendacion_id": str(recomendacion.id),
                 }
             ))
+
+           
         try:
             with transaction.atomic():
                 created_comp = Compartido.objects.bulk_create(to_create_compartidos) if to_create_compartidos else []
-                created_notif = Notificacion.objects.bulk_create(to_create_notifs) if to_create_notifs else []
+                Notificacion.objects.bulk_create(to_create_notifs) if to_create_notifs else []
+            
+            
+                receptores_ids = {n.user_destino_id for n in to_create_notifs} 
+
+                def _broadcast(): #mandamos datos al ws sobre los cambios surgidos en la tabla
+                    for uid in receptores_ids:
+                        _notify_user_notifications_changed(uid)
+
+            # Disparamos el broadcast SOLAMENTE si la base de datos guardó todo exitosamente
+            transaction.on_commit(_broadcast)
+            
             return Response({
                 "mensaje": f"Compartido con éxito a {len(created_comp)} amigos",
                 "omitidos_por_existencia": len(usuarios) - len(created_comp)
