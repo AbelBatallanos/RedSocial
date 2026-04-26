@@ -6,8 +6,9 @@ class AppWebSocketConsumer(AsyncJsonWebsocketConsumer):
         await self.accept()
         await self.send_json(
             {
-                "message": "WebSocket conectado correctamente.",
+                "message": "WebSocket conectado correctamente.  Implementado....",
                 "path": self.scope.get("path"),
+                
             }
         )
 
@@ -16,5 +17,7 @@ class AppWebSocketConsumer(AsyncJsonWebsocketConsumer):
             {
                 "type": "echo",
                 "data": content,
+                "prueba-socket": "aprovado --", 
+
             }
         )
