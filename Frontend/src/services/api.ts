@@ -295,36 +295,36 @@ export const enviarSolicitudAmistad = async (token: string, amigoId: string) => 
   return await response.json();
 };
 
+// Obtener la lista de mis amigos y solicitudes enviadas/recibidas
+export const obtenerMisAmigos = async (token: string) => {
+  try {
+    const response = await fetch(`${API_URL}/amistades/obtener-amistades/`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.amistades || [];
+  } catch (error) {
+    return [];
+  }
+};
+
 // Obtener solicitudes pendientes (Las que me enviaron a mí)
 export const obtenerSolicitudesPendientes = async (token: string) => {
-  const response = await fetch(`${API_URL}/amistades/obtener-amistades-pendientes/`, {
-    method: 'GET',
-    headers: { 'Authorization': `Bearer ${token}` },
-  });
-  const data = await response.json();
-  return data.amistades; // Según tu backend: {"amistades": [...]}
-};
+  try {
+    const response = await fetch(`${API_URL}/amistades/obtener-amistades-pendientes/`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    const data = await response.json();
+    return data.amistades || []; 
+  } catch (error) {
+    return [];
+  }
+}
 
-// Aceptar solicitud
-export const aceptarAmistad = async (token: string, amistadId: string) => {
-  const response = await fetch(`${API_URL}/amistades/aceptar-amistad/${amistadId}/`, {
-    method: 'PUT', // Tu backend usa PUT
-    headers: { 'Authorization': `Bearer ${token}` },
-  });
-  return await response.json();
-};
-
-// Obtener notificaciones generales
-export const obtenerNotificaciones = async (token: string) => {
-  const response = await fetch(`${API_URL}/usuarios/notificaciones/`, {
-    method: 'GET',
-    headers: { 'Authorization': `Bearer ${token}` },
-  });
-  const data = await response.json();
-  return response.ok ? data : [];
-};
-
-// Aceptar Amistad (Basado en tu URL: aceptar-amistad/<uuid:amistad_id>/)
+// Aceptar Amistad (Basado en la URL: aceptar-amistad/<uuid:amistad_id>/)
 export const responderSolicitud = async (token: string, amistadId: string, accion: 'aceptar' | 'rechazar') => {
   const endpoint = accion === 'aceptar' ? 'aceptar-amistad' : 'rechazar-amistad';
   const response = await fetch(`${API_URL}/amistades/${endpoint}/${amistadId}/`, {
@@ -334,45 +334,21 @@ export const responderSolicitud = async (token: string, amistadId: string, accio
   return await response.json();
 };
 
+// // Aceptar solicitud
+// export const aceptarAmistad = async (token: string, amistadId: string) => {
+//   const response = await fetch(`${API_URL}/amistades/aceptar-amistad/${amistadId}/`, {
+//     method: 'PUT', // Tu backend usa PUT
+//     headers: { 'Authorization': `Bearer ${token}` },
+//   });
+//   return await response.json();
+// };
 
-import client from '../../src/api/client'; 
-
-export const amistadService = {
-  // 1. Enviar solicitud (lo que usas en el botón "Seguir")
-  solicitarAmistad: async (amigoId: string) => {
-    const response = await client.post('/amistades/solicitar-amistad/', {
-      amigo_id: amigoId,
-    });
-    return response.data;
-  },
-
-  // 2. Aceptar solicitud (para la pantalla de notificaciones)
-  aceptarAmistad: async (solicitudId: string) => {
-    const response = await client.put(`/amistades/aceptar-amistad/${solicitudId}/`);
-    return response.data;
-  },
-
-  // 3. Rechazar solicitud
-  rechazarAmistad: async (solicitudId: string) => {
-    const response = await client.put(`/amistades/rechazar-amistad/${solicitudId}/`);
-    return response.data;
-  },
-
-  // 4. Obtener MIS amigos (Aceptados y pendientes)
-  obtenerMisAmigos: async () => {
-    const response = await client.get('/amistades/obtener-mis-amigos/');
-    return response.data.amistades; 
-  },
-
-  // 5. Obtener los que me escribieron a mí (Pendientes)
-  obtenerSolicitudesRecibidas: async () => {
-    const response = await client.get('/amistades/obtener-amistades-pendientes/');
-    return response.data.amistades;
-  },
-
-  // 6. Listado global (Tu nueva ruta para el "Ver más")
-  listarTodosLosUsuarios: async () => {
-    const response = await client.get('/usuarios/');
-    return response.data.Usuarios; // Ojo a la "U" mayúscula de tu backend
-  }
-};
+// // Obtener notificaciones generales
+// export const obtenerNotificaciones = async (token: string) => {
+//   const response = await fetch(`${API_URL}/usuarios/notificaciones/`, {
+//     method: 'GET',
+//     headers: { 'Authorization': `Bearer ${token}` },
+//   });
+//   const data = await response.json();
+//   return response.ok ? data : [];
+// };

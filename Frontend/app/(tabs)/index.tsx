@@ -284,7 +284,59 @@ export default function HomeScreen() {
       </Modal>
 
       <Modal visible={isSidebarVisible} transparent animationType="fade" onRequestClose={toggleSidebar}>
-         {/* Tu sidebar original */}
+        <View style={styles.sidebarOverlay}>
+          
+          <View style={styles.sidebarContent}>
+            <View style={styles.sidebarHeader}>
+              <Text style={styles.sidebarTitle}>Menú</Text>
+              <TouchableOpacity style={styles.headerSmallBtn} onPress={toggleSidebar}>
+                <X size={20} stroke={COLORS.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.squareActions}>
+              <TouchableOpacity style={styles.squareBtn} onPress={() => { toggleSidebar(); router.push('/(tabs)/profile'); }}>
+                <Avatar size={32} name={user?.nombre_usuario || "Usuario"} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.squareBtn} onPress={() => { toggleSidebar(); router.push('/(tabs)/activity'); }}>
+                <Bell size={24} stroke={COLORS.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.menuList} showsVerticalScrollIndicator={false}>
+              <View style={styles.menuCard}>
+                <TouchableOpacity style={styles.menuListItem} onPress={() => { toggleSidebar(); router.push('/(tabs)/create'); }}>
+                  <Text style={styles.menuListText}>Crear Recomendación</Text>
+                  <Send size={20} stroke={COLORS.textPrimary} />
+                </TouchableOpacity>
+                <View style={styles.listDivider} />
+                <TouchableOpacity style={styles.menuListItem} onPress={() => { toggleSidebar(); router.push('/(tabs)/activity'); }}>
+                  <Text style={styles.menuListText}>Favoritos</Text>
+                  <Heart size={20} stroke={COLORS.textPrimary} />
+                </TouchableOpacity>
+                <View style={styles.listDivider} />
+                <TouchableOpacity style={styles.menuListItem} onPress={() => { toggleSidebar(); router.push('/saved'); }}>
+                  <Text style={styles.menuListText}>Guardados</Text>
+                  <Bookmark size={20} stroke={COLORS.textPrimary} />
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+
+            <View style={styles.bottomActions}>
+              <TouchableOpacity style={styles.premiumAction} onPress={() => { toggleSidebar(); setPremiumVisible(true); }}>
+                <Sparkles size={18} stroke={COLORS.surface} />
+                <Text style={styles.premiumActionText}>RecTrack Premium</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.logoutAction} onPress={() => { toggleSidebar(); logout(); }}>
+                <LogOut size={20} stroke={COLORS.secondary} />
+                <Text style={styles.logoutActionText}>Cerrar Sesión</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <TouchableOpacity style={styles.sidebarBackdrop} activeOpacity={1} onPress={toggleSidebar} />
+        </View>
       </Modal>
 
       <PremiumModal isVisible={isPremiumVisible} onClose={() => setPremiumVisible(false)} />
@@ -324,7 +376,7 @@ const styles = StyleSheet.create({
   bottomActions: { marginTop: SIZES.xl, gap: SIZES.lg, paddingBottom: 40 },
   premiumAction: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.primary, padding: SIZES.md, borderRadius: 16, gap: SIZES.sm, justifyContent: 'center' },
   premiumActionText: { color: COLORS.surface, fontSize: 14, fontWeight: '900' },
-  logoutAction: { flexDirection: 'row', alignItems: 'center', gap: SIZES.sm, paddingLeft: SIZES.xs },
+  logoutAction: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SIZES.sm },
   logoutActionText: { color: COLORS.secondary, fontSize: 15, fontWeight: '800' },
   redDot: { position: 'absolute', top: 8, right: 8, width: 12, height: 12, backgroundColor: COLORS.secondary, borderRadius: 6, borderWidth: 2, borderColor: COLORS.surface },
   // ESTILOS PARA LOS MODALES CUSTOM DARK

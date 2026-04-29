@@ -71,7 +71,7 @@ export default function LoginScreen() {
           {/* Form - TUS INPUTS CON FIX */}
           <View style={styles.formContainer}>
             <Input
-              placeholder="Nombre de usuario"
+              placeholder="Correo electrónico"
               autoCapitalize="none"
               value={form.correo}
               // Actualizamos el estado del objeto de forma limpia

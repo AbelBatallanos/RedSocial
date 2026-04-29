@@ -32,9 +32,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     loadStorageData();
   }, []);
 
-  const login = (newToken: string, userData: any) => {
-    setToken(newToken);
-    setUser(userData);
+  const login = async (newToken: string, userData: any) => {
+    try {
+      await SecureStore.setItemAsync('userToken', newToken);
+      setToken(newToken);
+      setUser(userData);
+    } catch (error) {
+      console.error("Error al iniciar sesión", error);
+    }
   };
 
   const logout = async () => {

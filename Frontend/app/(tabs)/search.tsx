@@ -1,56 +1,56 @@
+// app/(tabs)/search.tsx
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Search as SearchIcon, Users, TrendingUp, ChevronRight } from 'lucide-react-native';
+import { Search as SearchIcon, Users, ChevronRight } from 'lucide-react-native';
 import { COLORS, SIZES, globalStyles } from '../../src/styles/theme';
 import { Avatar } from '../../src/components/ui/Avatar';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { buscarUsuarios, enviarSolicitudAmistad, obtenerTodosLosUsuarios } from '../../src/services/api';
 import { useRouter } from 'expo-router';
 
-// MOCK FIJO (Para que siempre haya contenido)
-
-
 const POPULAR_SEARCHES = ['🍔 Comida', '📺 Series', '💻 Tech', '✈️ Viajes', '☕ Café'];
 
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
-  const { token } = useAuthContext();
+  const { token, user: currentUser } = useAuthContext(); // Cambiamos el nombre para mayor claridad
   const router = useRouter();
 
   const [searchText, setSearchText] = useState('');
   const [results, setResults] = useState<any[]>([]);
-  const [dbUsers, setDbUsers] = useState<any[]>([]); 
+  const [dbUsers, setDbUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [requestSent, setRequestSent] = useState<string[]>([]);
 
   // CARGAR USUARIOS DE LA DB
   useEffect(() => {
     const cargarUsuariosDB = async () => {
-      console.log("📡 Intentando llamar a obtenerTodosLosUsuarios...");
       try {
         const users = await obtenerTodosLosUsuarios(token!);
-        console.log("✅ Usuarios recibidos de la DB:", users ? users.length : 0);
-        
         if (users && users.length > 0) {
-          // Tomamos solo los 2 últimos para mostrar en sugerencias junto al mock
-          setDbUsers(users.slice(-2));
+          // FILTRO CORRECTO: Excluimos al usuario actual basándonos en su ID o correo
+          // Asegúrate de que currentUser tenga el 'id' disponible
+          const filteredUsers = users.filter((u: any) => u.id !== currentUser?.id);
+          
+          // Tomamos hasta 3 usuarios aleatorios o recientes como sugerencias
+          setDbUsers(filteredUsers.slice(0, 3)); 
         }
       } catch (error) {
-        console.log("❌ Error en el useEffect de Search:", error);
+        console.log("❌ Error cargando usuarios:", error);
       }
     };
-    cargarUsuariosDB();
-  }, [token]);
+    if (token) cargarUsuariosDB();
+  }, [token, currentUser]);
 
   // BÚSQUEDA REAL
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       if (searchText.length > 2) {
         setLoading(true);
-        console.log("🔍 Buscando en API:", searchText);
         const users = await buscarUsuarios(token!, searchText);
-        setResults(users || []);
+        // FILTRO CORRECTO en los resultados de búsqueda
+        const filteredResults = (users || []).filter((u: any) => u.id !== currentUser?.id);
+        setResults(filteredResults);
         setLoading(false);
       } else {
         setResults([]);
@@ -60,22 +60,18 @@ export default function SearchScreen() {
   }, [searchText]);
 
   const handleFollow = async (amigoId: string) => {
-    console.log("➕ Enviando solicitud al ID:", amigoId);
     const res = await enviarSolicitudAmistad(token!, amigoId);
     if (res.informacion || res.id) {
       setRequestSent([...requestSent, amigoId]);
       Alert.alert("Éxito", "Solicitud enviada.");
     } else {
-      console.log("⚠️ Error al seguir:", res);
       Alert.alert("Aviso", res.error || "No se pudo enviar");
     }
   };
 
-  // Combinamos Mocks con DB para la lista de sugerencias
-  const allSuggestions = [ ...dbUsers];
-
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* ... (El resto de tu UI se mantiene igual, header, buscador, etc.) ... */}
       <View style={styles.header}>
         <Text style={styles.title}>Buscar</Text>
         <View style={styles.searchBar}>
@@ -93,7 +89,6 @@ export default function SearchScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        
         {/* RESULTADOS DE BÚSQUEDA ACTIVA */}
         {results.length > 0 && (
           <View style={{ marginBottom: SIZES.xl }}>
@@ -104,27 +99,28 @@ export default function SearchScreen() {
           </View>
         )}
 
-        {/* SECCIÓN SUGERENCIAS (MOCK + DB) */}
-        <View style={styles.sectionHeader}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Users size={18} stroke={COLORS.primary} style={{ marginRight: 8 }} />
-            <Text style={styles.sectionTitle}>Sugerencias</Text>
-          </View>
-          <TouchableOpacity 
-            style={styles.viewAllBtn} 
-            onPress={() => {
-              console.log("➡️ Navegando a todos los usuarios");
-              router.push('/all-users');
-            }}
-          >
-            <Text style={styles.viewAllText}>Ver más</Text>
-            <ChevronRight size={14} color={COLORS.primary} />
-          </TouchableOpacity>
-        </View>
+        {/* SECCIÓN SUGERENCIAS (SOLO DB) */}
+        {!searchText && dbUsers.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Users size={18} stroke={COLORS.primary} style={{ marginRight: 8 }} />
+                <Text style={styles.sectionTitle}>Sugerencias para ti</Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.viewAllBtn} 
+                onPress={() => router.push('/all-users')}
+              >
+                <Text style={styles.viewAllText}>Ver más</Text>
+                <ChevronRight size={14} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
 
-        {allSuggestions.map((user, index) => (
-          <UserItem key={user.id || index} user={user} onFollow={handleFollow} requestSent={requestSent} />
-        ))}
+            {dbUsers.map(user => (
+              <UserItem key={user.id} user={user} onFollow={handleFollow} requestSent={requestSent} />
+            ))}
+          </>
+        )}
 
         {/* TENDENCIAS */}
         <View style={styles.trendingSection}>
@@ -139,6 +135,8 @@ export default function SearchScreen() {
     </View>
   );
 }
+
+// ... (El componente UserItem y StyleSheet se mantienen igual) ...}
 
 // Componente interno para no repetir código
 const UserItem = ({ user, onFollow, requestSent }: any) => (

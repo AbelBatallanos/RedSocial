@@ -1,81 +1,121 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Stack } from 'expo-router';
-// ⚠️ AÑADIMOS enviarSolicitudAmistad
-import { obtenerTodosLosUsuarios, enviarSolicitudAmistad } from '../src/services/api';
+// Importamos las funciones limpias que acabamos de arreglar
+import { obtenerTodosLosUsuarios, enviarSolicitudAmistad, obtenerMisAmigos } from '../src/services/api';
 import { useAuthContext } from '../src/context/AuthContext';
 import { Avatar } from '../src/components/ui/Avatar';
 import { COLORS, SIZES } from '../src/styles/theme';
 
-interface User {
-  id: string;
-  nombre_usuario: string;
-  avatar?: string;
-  biografia?: string;
-}
-
 export default function AllUsersScreen() {
-  const { token, user } = useAuthContext();
-  const [users, setUsers] = useState<User[]>([]);
-  
-  // ⚠️ ESTADO PARA RASTREAR SOLICITUDES ENVIADAS
-  const [requestSent, setRequestSent] = useState<string[]>([]);
+  const { token, user: currentUser } = useAuthContext();
+  const [users, setUsers] = useState<any[]>([]);
+  const [amistades, setAmistades] = useState<any[]>([]); // Guardamos las relaciones reales
+
+  // Usamos un solo estado para forzar la recarga visual cuando agregamos a alguien
+  const [refreshTrigger, setRefreshTrigger] = useState(0); 
 
   useEffect(() => {
-    obtenerTodosLosUsuarios(token!).then((data) => {
-      // Filtramos para que no te salgas tú mismo en la lista
-      const filtrados = data.filter((u: User) => u.nombre_usuario !== user?.nombre_usuario);
-      setUsers(filtrados);
-    });
-  }, []);
+    const cargarDatos = async () => {
+      if (!token || !currentUser?.id) return;
 
-  // ⚠️ LA MISMA FUNCIÓN EXACTA QUE TIENES EN EL SEARCH
+      try {
+        // Ejecutamos ambas peticiones al mismo tiempo para que sea más rápido
+        const [todosLosUsuarios, misAmistades] = await Promise.all([
+          obtenerTodosLosUsuarios(token),
+          obtenerMisAmigos(token)
+        ]);
+
+        // Filtramos para no verte a ti mismo usando el ID
+        const filtrados = (todosLosUsuarios || []).filter((u: any) => u.id !== currentUser.id);
+        
+        setUsers(filtrados);
+        setAmistades(misAmistades || []);
+
+      } catch (error) {
+        console.log("Error cargando usuarios", error);
+      }
+    };
+
+    cargarDatos();
+  }, [token, currentUser, refreshTrigger]); // Se recarga si cambia el trigger
+
   const handleFollow = async (amigoId: string) => {
-    console.log("➕ Enviando solicitud al ID:", amigoId);
     const res = await enviarSolicitudAmistad(token!, amigoId);
     
-    if (res.informacion || res.id) {
-      setRequestSent([...requestSent, amigoId]);
+    if (res.message || res.amistad) {
       Alert.alert("Éxito", "Solicitud enviada.");
+      // Forzamos a que el useEffect vuelva a consultar la DB para actualizar los botones
+      setRefreshTrigger(prev => prev + 1); 
     } else {
-      console.log("⚠️ Error al seguir:", res);
       Alert.alert("Aviso", res.error || "No se pudo enviar");
     }
   };
 
+  // Función para determinar el estado de la relación con un usuario específico
+  const obtenerEstadoAmistad = (userId: string) => {
+    // Buscamos si existe una relación en la lista de amistades donde participe este usuario
+    const relacion = amistades.find(a => a.usuario?.id === userId || a.amigo?.id === userId);
+    return relacion ? relacion.estado : 'none'; // 'pending', 'accepted', o 'none'
+  };
+
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Descubrir personas', headerTintColor: COLORS.textPrimary }} />
+      {/* Header con flecha de retroceso nativa */}
+      <Stack.Screen 
+        options={{ 
+          title: 'Descubrir personas', 
+          headerShown: true, 
+          headerStyle: { backgroundColor: COLORS.background },
+          headerTintColor: COLORS.textPrimary,
+          headerShadowVisible: false 
+        }} 
+      />
+      
       <FlatList 
         data={users}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: SIZES.md }}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => {
           
-          // Comprobamos si a este usuario ya le dimos "Seguir"
-          const isSent = requestSent.includes(item.id);
+          // Verificamos el estado real en la base de datos
+          const estado = obtenerEstadoAmistad(item.id);
+          const isPending = estado === 'pending';
+          const isFriend = estado === 'accepted';
 
           return (
             <View style={styles.userItem}>
               <Avatar name={item.nombre_usuario} source={item.avatar} size={50} />
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={{ color: COLORS.textPrimary, fontWeight: '800' }}>@{item.nombre_usuario}</Text>
-                <Text style={{ color: COLORS.textSecondary, fontSize: 12 }}>{item.biografia || 'Sin biografía'}</Text>
+              <View style={styles.userInfo}>
+                <Text style={styles.userName}>@{item.nombre_usuario}</Text>
+                <Text style={styles.userBio} numberOfLines={1}>
+                  {item.biografia || 'Sin biografía'}
+                </Text>
               </View>
               
-              {/* ⚠️ BOTÓN ACTUALIZADO CON LOS ESTADOS */}
+              {/* Botón dinámico según el estado */}
               <TouchableOpacity 
-                style={[styles.btn, isSent && styles.btnSent]}
+                style={[
+                  styles.btn, 
+                  isPending && styles.btnPending,
+                  isFriend && styles.btnFriend
+                ]}
                 onPress={() => handleFollow(item.id)}
-                disabled={isSent}
+                disabled={isPending || isFriend} // Desactivamos si ya es amigo o está pendiente
               >
-                <Text style={[styles.btnText, isSent && styles.btnTextSent]}>
-                  {isSent ? 'Pendiente' : 'Seguir'}
+                <Text style={[
+                  styles.btnText, 
+                  isPending && styles.btnTextPending,
+                  isFriend && styles.btnTextFriend
+                ]}>
+                  {isFriend ? 'Amigos' : isPending ? 'Pendiente' : 'Seguir'}
                 </Text>
               </TouchableOpacity>
             </View>
           );
         }}
+        ListEmptyComponent={<Text style={styles.emptyText}>No hay usuarios para mostrar.</Text>}
       />
     </View>
   );
@@ -83,13 +123,31 @@ export default function AllUsersScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  userItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, backgroundColor: COLORS.surface, padding: 12, borderRadius: 15 },
+  userItem: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginBottom: 15, 
+    backgroundColor: COLORS.surface, 
+    padding: 12, 
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: COLORS.border
+  },
+  userInfo: { flex: 1, marginLeft: 12 },
+  userName: { color: COLORS.textPrimary, fontWeight: '800', fontSize: 16 },
+  userBio: { color: COLORS.textSecondary, fontSize: 13, marginTop: 2 },
   
-  // ESTILOS DEL BOTÓN ORIGINAL
-  btn: { backgroundColor: COLORS.primary, paddingVertical: 8, paddingHorizontal: 15, borderRadius: 10 },
-  btnText: { color: COLORS.surface, fontWeight: '900' },
+  // Botón Normal (Seguir)
+  btn: { backgroundColor: COLORS.primary, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 12 },
+  btnText: { color: COLORS.surface, fontWeight: '900', fontSize: 13 },
   
-  // ESTILOS DEL BOTÓN CUANDO YA SE ENVIÓ LA SOLICITUD
-  btnSent: { backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.border },
-  btnTextSent: { color: COLORS.textSecondary }
+  // Botón Pendiente
+  btnPending: { backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.border },
+  btnTextPending: { color: COLORS.textSecondary },
+
+  // Botón Amigo
+  btnFriend: { backgroundColor: COLORS.surfaceAlt, borderWidth: 0 },
+  btnTextFriend: { color: COLORS.textPrimary },
+
+  emptyText: { color: COLORS.textTertiary, textAlign: 'center', marginTop: 40 }
 });
