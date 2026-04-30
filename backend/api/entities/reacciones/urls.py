@@ -1,8 +1,11 @@
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import path
 
-from .views import ReaccionViewSet
+from .views import ReaccionViewSet, VerReaccionPorIdRecomendacion
 
-router = DefaultRouter()
-router.register(r"", ReaccionViewSet, basename="reacciones")
+urlpatterns = [
+    path("reaccion/", ReaccionViewSet.as_view()),
+    path("recomendacion/<uuid:id_recomendacion>/", VerReaccionPorIdRecomendacion.as_view())
+]
 
-urlpatterns = router.urls
+
+

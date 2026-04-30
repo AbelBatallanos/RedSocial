@@ -26,13 +26,13 @@ class Suscripcion(TimeStampedModel):
     fecha_inicio = models.DateTimeField(auto_now_add=True)
     fecha_fin = models.DateTimeField() 
     
-    monto = models.DecimalField(max_digits=10, decimal_places=2)
-    metodo_pago = models.CharField(
-        max_length=50, 
-        choices=MetodoPago.choices,
-        default=MetodoPago.TARJETA
-    )
-    transaccion_id = models.CharField(max_length=255, null=True, blank=True)
+    # monto = models.DecimalField(max_digits=10, decimal_places=2)
+    # metodo_pago = models.CharField(
+    #     max_length=50, 
+    #     choices=MetodoPago.choices,
+    #     default=MetodoPago.TARJETA
+    # )
+    # transaccion_id = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:
         db_table = "suscripciones"
