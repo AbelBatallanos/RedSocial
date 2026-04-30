@@ -9,8 +9,8 @@ class SuscripcionSerializer(serializers.ModelSerializer):
         model = Suscripcion
         # Incluimos los campos que nos interesan
         fields = [
-            "id", "user", "monto", "metodo_pago", 
-            "transaccion_id", "estado", "fecha_inicio", "fecha_fin"
+            "id", "user", 
+            "estado", "fecha_inicio", "fecha_fin"
         ]
         # El cliente SOLO puede enviar 'user', 'monto', 'metodo_pago' y 'transaccion_id'
         read_only_fields = ["id", "estado", "fecha_inicio", "fecha_fin"]

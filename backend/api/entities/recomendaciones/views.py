@@ -23,13 +23,13 @@ class CrearRecomendacionView(APIView):
         
         # 1. Validar límite para usuarios no premium
         # Asegúrate de que has_premium exista en tu modelo Usuario o ajústalo a es_premium
-        # if not getattr(user, 'has_premium', False): 
-        #     countRecomendaciones = Recomendacion.objects.filter(autor=user, estado="creado").count()
-        #     if countRecomendaciones >= 5:
-        #         return Response(
-        #             {"error": "Ha excedido la cantidad máxima (5). Mejora a Premium."}, 
-        #             status=status.HTTP_403_FORBIDDEN
-        #         )
+        if not getattr(user, 'has_premium', False): 
+            countRecomendaciones = Recomendacion.objects.filter(autor=user, estado="creado").count()
+            if countRecomendaciones >= 5:
+                return Response(
+                    {"error": "Ha excedido la cantidad máxima (5). Mejora a Premium."}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
         
         # 2. Usar el Serializer para validar y guardar datos (incluyendo la imagen)
         # request.data automáticamente maneja archivos (imágenes) si la petición es multipart/form-data
