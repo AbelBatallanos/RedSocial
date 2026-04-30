@@ -1,9 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Linking } from 'react-native';
-import { Heart, MessageCircle, Send, MoreHorizontal, ExternalLink, Hash } from 'lucide-react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Linking, ActivityIndicator } from 'react-native';
+import { Heart, MessageCircle, Send, MoreHorizontal, ExternalLink, Star } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { COLORS, SIZES } from '../../styles/theme';
 import { Avatar } from '../ui/Avatar';
+import { enviarCalificacion, getAuthToken, obtenerCalificacion } from '../../services/api';
 
 interface PostCardProps {
   id?: string;
@@ -35,6 +36,26 @@ export const PostCard = ({
 }: PostCardProps) => {
   const router = useRouter();
 
+  const [rating, setRating] = useState(0); 
+  const [isLoadingRating, setIsLoadingRating] = useState(false); // Para mostrar que está cargando
+
+  // NUEVO: Efecto para cargar la calificación inicial cuando la tarjeta aparece
+  useEffect(() => {
+    const fetchCalificacion = async () => {
+      if (id && isRecommendation) {
+        const token = await getAuthToken();
+        if (token) {
+           const result = await obtenerCalificacion(token, id);
+           // Suponiendo que el backend devuelve { stars: X } cuando ya calificó
+           if (result.success && result.data && result.data.stars) {
+             setRating(result.data.stars);
+           }
+        }
+      }
+    };
+    fetchCalificacion();
+  }, [id, isRecommendation])
+
   const handlePostPress = () => {
     router.push({ pathname: '/post/[id]', params: { id } });
   };
@@ -45,9 +66,31 @@ export const PostCard = ({
     }
   };
 
+  const handleRating = async (selectedRating: number) => {
+    if (!id || isLoadingRating) return;   
+    
+    setIsLoadingRating(true);
+    
+    const token = await getAuthToken();
+    if (token) {
+      const result = await enviarCalificacion(token, id, selectedRating);
+      if (result.success) {
+        setRating(selectedRating);
+      } else {
+        console.log("Error al calificar", result.error);
+      }
+    }
+    
+    // Congelamos la UI artificialmente por 1 segundo (1000 milisegundos)
+    // para evitar que hagan spam de clicks.
+    setTimeout(() => {
+      setIsLoadingRating(false); // Liberamos el bloqueo
+    }, 1000); 
+  };
+
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Header (Sin cambios) */}
       <View style={styles.header}>
         <Avatar source={user.avatar} name={user.name} size={48} />
         <View style={styles.headerInfo}>
@@ -62,8 +105,6 @@ export const PostCard = ({
           <Text style={styles.username}>@{user.username} • {time}</Text>
         </View>
         
-        {/* MAGIA AQUÍ: Solo muestra los 3 puntitos si es tu post */}
-        {/* AGREGA ESTE BLOQUE: Solo si es mi post, muestra los puntos */}
         {isMyPost && (
           <TouchableOpacity style={styles.moreBtn} onPress={onOptionsPress}>
             <MoreHorizontal size={20} stroke={COLORS.textTertiary} />
@@ -78,7 +119,6 @@ export const PostCard = ({
           <Text style={styles.contentText}>{content}</Text>
         </TouchableOpacity>
         
-        {/* IMAGEN CONDICIONAL: Solo si existe */}
         {image && (
           <Image source={{ uri: image }} style={styles.postImage} resizeMode="cover" />
         )}
@@ -90,19 +130,39 @@ export const PostCard = ({
           </TouchableOpacity>
         )}
 
+        {/* NUEVO: Contenedor de Calificación */}
         {isRecommendation && (
           <View style={styles.actionContainer}>
             <View style={styles.recommendationBadge}>
-              <Text style={styles.badgeText}>¿Hiciste caso a tu amigo?</Text>
-              <TouchableOpacity style={styles.triedButton}>
-                <Text style={styles.triedText}>Lo probé</Text>
-              </TouchableOpacity>
+              <Text style={styles.badgeText}>¿Qué te pareció?</Text>
+              
+              <View style={styles.starsContainer}>
+                {isLoadingRating ? (
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                ) : (
+                  [1, 2, 3, 4, 5].map((starIndex) => (
+                    <TouchableOpacity 
+                      key={starIndex} 
+                      onPress={() => handleRating(starIndex)}
+                      style={styles.starButton}
+                      disabled={isLoadingRating} // <--- NUEVO: Bloquea el botón
+                    >
+                      <Star 
+                        size={24} 
+                        fill={starIndex <= rating ? COLORS.primary : 'transparent'} 
+                        stroke={starIndex <= rating ? COLORS.primary : COLORS.textTertiary} 
+                      />
+                    </TouchableOpacity>
+                  ))
+                )}
+              </View>
+
             </View>
           </View>
         )}
       </View>
 
-      {/* Footer */}
+      {/* Footer (Sin cambios) */}
       <View style={styles.footer}>
         <View style={styles.leftFooter}>
           <TouchableOpacity style={styles.statItem}>
@@ -122,29 +182,13 @@ export const PostCard = ({
   );
 };
 
-// ESTILOS INTACTOS
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: COLORS.surface,
-    marginBottom: SIZES.md,
-    marginHorizontal: SIZES.md,
-    borderRadius: 24,
-    padding: SIZES.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
+  container: { backgroundColor: COLORS.surface, marginBottom: SIZES.md, marginHorizontal: SIZES.md, borderRadius: 24, padding: SIZES.md, borderWidth: 1, borderColor: COLORS.border },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: SIZES.md },
   headerInfo: { flex: 1, marginLeft: SIZES.sm },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   name: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
-  typeBadge: {
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
+  typeBadge: { backgroundColor: COLORS.background, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: COLORS.border },
   typeText: { fontSize: 10, fontWeight: '900', color: COLORS.primary },
   username: { fontSize: 13, color: COLORS.textTertiary, fontWeight: '600' },
   moreBtn: { padding: 4 },
@@ -152,29 +196,18 @@ const styles = StyleSheet.create({
   postTitle: { fontSize: 19, fontWeight: '900', color: COLORS.textPrimary, marginBottom: 6 },
   contentText: { fontSize: 15, color: COLORS.textSecondary, lineHeight: 22, marginBottom: SIZES.md, fontWeight: '500' },
   postImage: { width: '100%', height: 240, borderRadius: 20, marginBottom: SIZES.md },
-  linkButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    padding: 12,
-    borderRadius: 16,
-    marginBottom: SIZES.md,
-    gap: 8,
-  },
+  linkButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surface, borderWidth: 1.5, borderColor: COLORS.primary, padding: 12, borderRadius: 16, marginBottom: SIZES.md, gap: 8 },
   linkButtonText: { color: COLORS.primary, fontWeight: '900', fontSize: 14 },
-  actionContainer: {
-    backgroundColor: COLORS.background,
-    borderRadius: 20,
-    padding: SIZES.md,
-    marginBottom: SIZES.sm,
-  },
+  
+  // Estilos de la sección de calificación
+  actionContainer: { backgroundColor: COLORS.background, borderRadius: 20, padding: SIZES.md, marginBottom: SIZES.sm },
   recommendationBadge: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  badgeText: { fontSize: 13, color: COLORS.textPrimary, fontWeight: '800' },
-  triedButton: { backgroundColor: COLORS.textPrimary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
-  triedText: { color: COLORS.background, fontSize: 12, fontWeight: '900' },
+  badgeText: { fontSize: 14, color: COLORS.textPrimary, fontWeight: '800' }, // Cambié un poco el tamaño
+  
+  // NUEVOS ESTILOS PARA LAS ESTRELLAS
+  starsContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  starButton: { padding: 2 },
+  
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SIZES.sm, paddingTop: SIZES.md, borderTopWidth: 1, borderTopColor: COLORS.border },
   leftFooter: { flexDirection: 'row', alignItems: 'center' },
   statItem: { flexDirection: 'row', alignItems: 'center', marginRight: SIZES.xl },

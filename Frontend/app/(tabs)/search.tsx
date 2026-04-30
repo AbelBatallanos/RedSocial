@@ -9,6 +9,12 @@ import { useAuthContext } from '../../src/context/AuthContext';
 import { buscarUsuarios, enviarSolicitudAmistad, obtenerTodosLosUsuarios } from '../../src/services/api';
 import { useRouter } from 'expo-router';
 
+const getFullImageUrl = (url: string | null | undefined) => {
+  if (!url) return undefined;
+  if (url.startsWith('http')) return url;
+  return `http://54.166.248.222:8000${url}`;
+};
+
 const POPULAR_SEARCHES = ['🍔 Comida', '📺 Series', '💻 Tech', '✈️ Viajes', '☕ Café'];
 
 export default function SearchScreen() {
@@ -31,9 +37,9 @@ export default function SearchScreen() {
           // FILTRO CORRECTO: Excluimos al usuario actual basándonos en su ID o correo
           // Asegúrate de que currentUser tenga el 'id' disponible
           const filteredUsers = users.filter((u: any) => u.id !== currentUser?.id);
-          
+
           // Tomamos hasta 3 usuarios aleatorios o recientes como sugerencias
-          setDbUsers(filteredUsers.slice(0, 3)); 
+          setDbUsers(filteredUsers.slice(0, 3));
         }
       } catch (error) {
         console.log("❌ Error cargando usuarios:", error);
@@ -107,8 +113,8 @@ export default function SearchScreen() {
                 <Users size={18} stroke={COLORS.primary} style={{ marginRight: 8 }} />
                 <Text style={styles.sectionTitle}>Sugerencias para ti</Text>
               </View>
-              <TouchableOpacity 
-                style={styles.viewAllBtn} 
+              <TouchableOpacity
+                style={styles.viewAllBtn}
                 onPress={() => router.push('/all-users')}
               >
                 <Text style={styles.viewAllText}>Ver más</Text>
@@ -141,12 +147,12 @@ export default function SearchScreen() {
 // Componente interno para no repetir código
 const UserItem = ({ user, onFollow, requestSent }: any) => (
   <View style={styles.userItem}>
-    <Avatar source={user.avatar} name={user.nombre_usuario} size={52} />
+    <Avatar source={getFullImageUrl(user.avatar)} name={user.nombre_usuario} size={52} />
     <View style={styles.userInfo}>
       <Text style={styles.userName}>@{user.nombre_usuario}</Text>
       <Text style={styles.fullName}>{user.id.includes('mock') ? 'Sugerencia' : 'Usuario real'}</Text>
     </View>
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[styles.followBtn, requestSent.includes(user.id) && styles.followingBtn]}
       onPress={() => onFollow(user.id)}
       disabled={user.id.includes('mock') || requestSent.includes(user.id)}

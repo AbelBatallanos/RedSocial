@@ -81,7 +81,7 @@ export default function HomeScreen() {
   const getFullImageUrl = (url: string | null) => {
     if (!url) return null;
     if (url.startsWith('http')) return url;
-    return `http://192.168.1.12:8000${url}`;
+    return `http://54.166.248.222:8000${url}`;
   };
 
   useEffect(() => {
@@ -197,9 +197,9 @@ export default function HomeScreen() {
               // 🔥 LA SOLUCIÓN TODOTERRENO: Comparamos TODO lo posible
               const autorPost = item.autor_detalle?.nombre_usuario;
               const isMyPost = (
-                user?.nombre_usuario === autorPost || 
-                user?.username === autorPost || 
-                user?.correo === autorPost || 
+                user?.nombre_usuario === autorPost ||
+                user?.username === autorPost ||
+                user?.correo === autorPost ||
                 user?.id === item.autor ||
                 user?.id === item.autor_id
               );
@@ -211,7 +211,7 @@ export default function HomeScreen() {
                     user={{
                       name: autorPost || "Usuario",
                       username: autorPost || "invitado",
-                      avatar: item.autor_detalle?.avatar
+                      avatar: getFullImageUrl(item.autor_detalle?.avatar) || undefined
                     }}
                     time={formatTime(item.creado_en)}
                     title={item.titulo}
@@ -237,25 +237,25 @@ export default function HomeScreen() {
           )}
         </View>
       </ScrollView>
-      
+
       {/* 1. MODAL DE OPCIONES OSCURO */}
       <Modal visible={showOptionsModal} transparent animationType="fade">
         <View style={styles.customModalOverlay}>
           <View style={styles.customModalCard}>
             <Text style={styles.customModalTitle}>Opciones del Post</Text>
-            
+
             <TouchableOpacity style={styles.customModalAction} onPress={handleEditarPost}>
               <Text style={styles.customModalActionText}>Editar publicación</Text>
             </TouchableOpacity>
-            
+
             <View style={styles.customModalDivider} />
-            
+
             <TouchableOpacity style={styles.customModalAction} onPress={confirmarEliminacion}>
               <Text style={[styles.customModalActionText, { color: '#FF3B30' }]}>Eliminar publicación</Text>
             </TouchableOpacity>
 
             <View style={styles.customModalDivider} />
-            
+
             <TouchableOpacity style={styles.customModalAction} onPress={() => setShowOptionsModal(false)}>
               <Text style={[styles.customModalActionText, { color: COLORS.textSecondary }]}>Cancelar</Text>
             </TouchableOpacity>
@@ -269,12 +269,12 @@ export default function HomeScreen() {
           <View style={styles.customModalCard}>
             <Text style={styles.customModalTitle}>¿Estás seguro?</Text>
             <Text style={styles.customModalSub}>Esta acción no se puede deshacer y el post se borrará permanentemente.</Text>
-            
+
             <View style={styles.customModalRow}>
               <TouchableOpacity style={styles.customModalBtnCancel} onPress={() => setShowDeleteModal(false)}>
                 <Text style={styles.customModalBtnTextCancel}>Cancelar</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity style={styles.customModalBtnDelete} onPress={ejecutarEliminacion}>
                 <Text style={styles.customModalBtnTextDelete}>Sí, eliminar</Text>
               </TouchableOpacity>
@@ -285,7 +285,7 @@ export default function HomeScreen() {
 
       <Modal visible={isSidebarVisible} transparent animationType="fade" onRequestClose={toggleSidebar}>
         <View style={styles.sidebarOverlay}>
-          
+
           <View style={styles.sidebarContent}>
             <View style={styles.sidebarHeader}>
               <Text style={styles.sidebarTitle}>Menú</Text>
@@ -327,7 +327,7 @@ export default function HomeScreen() {
                 <Sparkles size={18} stroke={COLORS.surface} />
                 <Text style={styles.premiumActionText}>RecTrack Premium</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity style={styles.logoutAction} onPress={() => { toggleSidebar(); logout(); }}>
                 <LogOut size={20} stroke={COLORS.secondary} />
                 <Text style={styles.logoutActionText}>Cerrar Sesión</Text>

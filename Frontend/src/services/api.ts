@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 // ==========================================
 // CONFIGURACIÓN: Reemplaza con la IP de tu PC
 // ==========================================
-export const API_URL = 'http://192.168.1.12:8000/api'; 
+export const API_URL = 'http://54.166.248.222:8000/api';
 
 // Ayudante para obtener el token guardado
 export const getAuthToken = async () => {
@@ -23,13 +23,13 @@ export const loginUsuario = async (email: string, password: string) => {
   try {
     const response = await fetch(`${API_URL}/usuarios/login/`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         correo: email,
-        password: password 
+        password: password
       })
     });
 
@@ -83,9 +83,9 @@ export const obtenerTodosLosUsuarios = async (token: string) => {
   try {
     const response = await fetch(`${API_URL}/usuarios/todos/`, {
       method: 'GET',
-      headers: { 
+      headers: {
         'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json' 
+        'Accept': 'application/json'
       },
     });
 
@@ -106,13 +106,13 @@ export const obtenerTodosLosUsuarios = async (token: string) => {
 // 5. PERFIL DE USUARIO
 // ==========================================
 export const actualizarPerfil = async (
-  token: string, 
-  datos: { nombre_usuario?: string, biografia?: string, fecha_nacimiento?: string }, 
+  token: string,
+  datos: { nombre_usuario?: string, biografia?: string, fecha_nacimiento?: string },
   imageUri?: string | null
 ) => {
   try {
     const formData = new FormData();
-    
+
     if (datos.nombre_usuario) formData.append('nombre_usuario', datos.nombre_usuario);
     if (datos.biografia) formData.append('biografia', datos.biografia);
     if (datos.fecha_nacimiento) formData.append('fecha_nacimiento', datos.fecha_nacimiento);
@@ -163,7 +163,7 @@ export const obtenerFeedGlobal = async (token: string) => {
 
 export const obtenerPosts = async (token: string) => {
   try {
-    const response = await fetch(`${API_URL}/recomendaciones/mis-recomendaciones/`, { 
+    const response = await fetch(`${API_URL}/recomendaciones/mis-recomendaciones/`, {
       // O el endpoint de feed global si lo tienes
       method: 'GET',
       headers: {
@@ -191,7 +191,7 @@ export const crearRecomendacion = async (token: string, datos: any, imageUri: st
       const filename = imageUri.split('/').pop();
       const match = /\.(\w+)$/.exec(filename || '');
       const type = match ? `image/${match[1]}` : `image`;
-      
+
       // @ts-ignore
       formData.append('imagen', { uri: imageUri, name: filename, type });
     }
@@ -202,7 +202,7 @@ export const crearRecomendacion = async (token: string, datos: any, imageUri: st
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json',
       },
-      body: formData, 
+      body: formData,
     });
 
     const data = await response.json();
@@ -234,7 +234,7 @@ export const actualizarRecomendacion = async (token: string, id: string, datos: 
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json',
       },
-      body: formData, 
+      body: formData,
     });
 
     const data = await response.json();
@@ -318,7 +318,7 @@ export const obtenerSolicitudesPendientes = async (token: string) => {
       headers: { 'Authorization': `Bearer ${token}` },
     });
     const data = await response.json();
-    return data.amistades || []; 
+    return data.amistades || [];
   } catch (error) {
     return [];
   }
@@ -334,21 +334,137 @@ export const responderSolicitud = async (token: string, amistadId: string, accio
   return await response.json();
 };
 
-// // Aceptar solicitud
-// export const aceptarAmistad = async (token: string, amistadId: string) => {
-//   const response = await fetch(`${API_URL}/amistades/aceptar-amistad/${amistadId}/`, {
-//     method: 'PUT', // Tu backend usa PUT
-//     headers: { 'Authorization': `Bearer ${token}` },
-//   });
-//   return await response.json();
-// };
+export const comprobarNotificacionesNoLeidas = async (token: string) => {
+  try {
+    const response = await fetch(`${API_URL}/notificaciones/mine/`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!response.ok) return 0;
+    const data = await response.json();
+    return data.notificaciones?.length || 0;
+  } catch (error) {
+    return 0;
+  }
+};
 
-// // Obtener notificaciones generales
-// export const obtenerNotificaciones = async (token: string) => {
-//   const response = await fetch(`${API_URL}/usuarios/notificaciones/`, {
-//     method: 'GET',
-//     headers: { 'Authorization': `Bearer ${token}` },
-//   });
-//   const data = await response.json();
-//   return response.ok ? data : [];
-// };
+export const marcarNotificacionComoLeida = async (token: string, notificacionId: string) => {
+  try {
+    const response = await fetch(`${API_URL}/notificaciones/${notificacionId}/`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.log("❌ Error al marcar como leída:", error);
+    return false;
+  }
+};
+
+
+// ==========================================
+// 2. REACCIONES (CALIFICACIONES)
+// ==========================================
+
+export const obtenerCalificacion = async (token: string, idRecomendacion: string) => {
+  try {
+    const response = await fetch(`${API_URL}/reacciones/recomendacion/${idRecomendacion}/`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      return { success: true, data };
+    } else {
+      // Ojo aquí: Si da error 404, muchas veces es porque el usuario simplemente 
+      // no ha calificado este post todavía. No es un error crítico.
+      if (response.status !== 404) {
+        console.log(`[API_GET_CALIFICACION] Error ${response.status}:`, data);
+      }
+      return { success: false, error: data, status: response.status };
+    }
+  } catch (error) {
+    console.error('[API_GET_CALIFICACION] Error de red:', error);
+    return { success: false, error: 'Error de conexión' };
+  }
+};
+
+export const enviarCalificacion = async (token: string, idRecomendacion: string, stars: number) => {
+  try {
+    console.log(`[API_POST_CALIFICACION] Mandando ${stars} estrellas para: ${idRecomendacion}`);
+
+    const response = await fetch(`${API_URL}/reacciones/reaccion/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        id_recomendacion: idRecomendacion,
+        stars: stars,
+      }),
+    });
+
+    // 1. Leemos la respuesta cruda como texto primero
+    const responseText = await response.text();
+
+    let data;
+    try {
+      // 2. Intentamos convertirla a JSON
+      data = JSON.parse(responseText);
+    } catch (e) {
+      // Si explota, te muestro qué mandó el backend realmente (la famosa "P")
+      console.log(`[API_POST_CRASH] El server no mandó JSON. Mandó esto:`, responseText.substring(0, 100));
+      return { success: false, error: 'Respuesta no válida del servidor' };
+    }
+
+    if (response.ok) {
+      console.log('[API_POST_CALIFICACION] ¡Éxito!', data);
+      return { success: true, data };
+    } else {
+      console.log(`[API_POST_CALIFICACION] Error del server (${response.status}):`, data);
+      return { success: false, error: data };
+    }
+  } catch (error) {
+    console.error('[API_POST_CALIFICACION] Error de red:', error);
+    return { success: false, error: 'Error de conexión' };
+  }
+};
+
+
+export const activarPremium = async (token: string) => {
+  try {
+    const response = await fetch(`${API_URL}/suscripciones/crear/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({}),
+    });
+
+    const responseText = await response.text();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      data = responseText;
+    }
+
+    return { success: response.ok, data };
+  } catch (error) {
+    console.error('[API_ACTIVAR_PREMIUM] Error:', error);
+    return { success: false, error: 'Error de conexión' };
+  }
+};

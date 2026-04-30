@@ -7,17 +7,23 @@ import { useAuthContext } from '../src/context/AuthContext';
 import { Avatar } from '../src/components/ui/Avatar';
 import { COLORS, SIZES } from '../src/styles/theme';
 
+const getFullImageUrl = (url: string | null | undefined) => {
+  if (!url) return undefined;
+  if (url.startsWith('http')) return url;
+  return `http://54.166.248.222:8000${url}`;
+};
+
 export default function AllUsersScreen() {
   const { token, user: currentUser } = useAuthContext();
   const [users, setUsers] = useState<any[]>([]);
   const [amistades, setAmistades] = useState<any[]>([]); // Guardamos las relaciones reales
 
   // Usamos un solo estado para forzar la recarga visual cuando agregamos a alguien
-  const [refreshTrigger, setRefreshTrigger] = useState(0); 
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     const cargarDatos = async () => {
-      if (!token || !currentUser?.id) return;
+      if (!token) return;
 
       try {
         // Ejecutamos ambas peticiones al mismo tiempo para que sea más rápido
@@ -26,9 +32,10 @@ export default function AllUsersScreen() {
           obtenerMisAmigos(token)
         ]);
 
+        const idActual = currentUser?.id || '';
         // Filtramos para no verte a ti mismo usando el ID
-        const filtrados = (todosLosUsuarios || []).filter((u: any) => u.id !== currentUser.id);
-        
+        const filtrados = (todosLosUsuarios || []).filter((u: any) => u.id !== idActual);
+
         setUsers(filtrados);
         setAmistades(misAmistades || []);
 
@@ -42,11 +49,11 @@ export default function AllUsersScreen() {
 
   const handleFollow = async (amigoId: string) => {
     const res = await enviarSolicitudAmistad(token!, amigoId);
-    
+
     if (res.message || res.amistad) {
       Alert.alert("Éxito", "Solicitud enviada.");
       // Forzamos a que el useEffect vuelva a consultar la DB para actualizar los botones
-      setRefreshTrigger(prev => prev + 1); 
+      setRefreshTrigger(prev => prev + 1);
     } else {
       Alert.alert("Aviso", res.error || "No se pudo enviar");
     }
@@ -62,23 +69,23 @@ export default function AllUsersScreen() {
   return (
     <View style={styles.container}>
       {/* Header con flecha de retroceso nativa */}
-      <Stack.Screen 
-        options={{ 
-          title: 'Descubrir personas', 
-          headerShown: true, 
+      <Stack.Screen
+        options={{
+          title: 'Descubrir personas',
+          headerShown: true,
           headerStyle: { backgroundColor: COLORS.background },
           headerTintColor: COLORS.textPrimary,
-          headerShadowVisible: false 
-        }} 
+          headerShadowVisible: false
+        }}
       />
-      
-      <FlatList 
+
+      <FlatList
         data={users}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: SIZES.md }}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => {
-          
+
           // Verificamos el estado real en la base de datos
           const estado = obtenerEstadoAmistad(item.id);
           const isPending = estado === 'pending';
@@ -86,18 +93,18 @@ export default function AllUsersScreen() {
 
           return (
             <View style={styles.userItem}>
-              <Avatar name={item.nombre_usuario} source={item.avatar} size={50} />
+              <Avatar name={item.nombre_usuario} source={getFullImageUrl(item.avatar)} size={50} />
               <View style={styles.userInfo}>
                 <Text style={styles.userName}>@{item.nombre_usuario}</Text>
                 <Text style={styles.userBio} numberOfLines={1}>
                   {item.biografia || 'Sin biografía'}
                 </Text>
               </View>
-              
+
               {/* Botón dinámico según el estado */}
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[
-                  styles.btn, 
+                  styles.btn,
                   isPending && styles.btnPending,
                   isFriend && styles.btnFriend
                 ]}
@@ -105,7 +112,7 @@ export default function AllUsersScreen() {
                 disabled={isPending || isFriend} // Desactivamos si ya es amigo o está pendiente
               >
                 <Text style={[
-                  styles.btnText, 
+                  styles.btnText,
                   isPending && styles.btnTextPending,
                   isFriend && styles.btnTextFriend
                 ]}>
@@ -123,12 +130,12 @@ export default function AllUsersScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  userItem: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginBottom: 15, 
-    backgroundColor: COLORS.surface, 
-    padding: 12, 
+  userItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+    backgroundColor: COLORS.surface,
+    padding: 12,
     borderRadius: 15,
     borderWidth: 1,
     borderColor: COLORS.border
@@ -136,11 +143,11 @@ const styles = StyleSheet.create({
   userInfo: { flex: 1, marginLeft: 12 },
   userName: { color: COLORS.textPrimary, fontWeight: '800', fontSize: 16 },
   userBio: { color: COLORS.textSecondary, fontSize: 13, marginTop: 2 },
-  
+
   // Botón Normal (Seguir)
   btn: { backgroundColor: COLORS.primary, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 12 },
   btnText: { color: COLORS.surface, fontWeight: '900', fontSize: 13 },
-  
+
   // Botón Pendiente
   btnPending: { backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.border },
   btnTextPending: { color: COLORS.textSecondary },

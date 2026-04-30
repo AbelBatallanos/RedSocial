@@ -5,7 +5,7 @@ import { Heart, Star, MoreHorizontal, UserPlus, MessageCircle } from 'lucide-rea
 import { COLORS, SIZES, globalStyles } from '../../src/styles/theme';
 import { Avatar } from '../../src/components/ui/Avatar';
 import { useAuthContext } from '../../src/context/AuthContext';
-import { obtenerSolicitudesPendientes, responderSolicitud } from '../../src/services/api';
+import { obtenerSolicitudesPendientes, responderSolicitud, marcarNotificacionComoLeida } from '../../src/services/api';
 
 export default function ActivityScreen() {
   const insets = useSafeAreaInsets();
@@ -20,9 +20,20 @@ export default function ActivityScreen() {
   const cargarDatos = async () => {
     if (!token) return;
     setLoading(true);
+    // 1. Obtenemos las solicitudes
     const data = await obtenerSolicitudesPendientes(token);
     setRequests(data || []);
     setLoading(false);
+
+    // 2. Lógica para limpiar el "puntito rojo"
+    // Si hay solicitudes nuevas, las marcamos como leídas en el backend
+    if (data && data.length > 0) {
+      data.forEach(async (req: any) => {
+        // Asumiendo que req.id es el ID de la notificación o que puedes 
+        // obtener el ID de la notificación desde el objeto
+        await marcarNotificacionComoLeida(token, req.id);
+      });
+    }
   };
 
   useEffect(() => {
@@ -72,7 +83,7 @@ export default function ActivityScreen() {
             {(activeTab === 'Todo' || activeTab === 'Solicitudes') && requests.map((req: any) => (
               <View key={req.id} style={styles.activityItem}>
                 <View style={styles.avatarContainer}>
-                  <Avatar source={req.usuario_detalle?.avatar} name={req.usuario_detalle?.nombre_usuario} size={52} />
+                  <Avatar source={req.usuario?.avatar} name={req.usuario?.nombre_usuario} size={52} />
                   <View style={[styles.typeBadge, { backgroundColor: COLORS.primary }]}>
                     <UserPlus size={14} stroke={COLORS.surface} />
                   </View>
@@ -80,7 +91,7 @@ export default function ActivityScreen() {
 
                 <View style={styles.activityInfo}>
                   <Text style={styles.activityText}>
-                    <Text style={styles.bold}>{req.usuario_detalle?.nombre_usuario}</Text> te envió una solicitud de amistad.
+                    <Text style={styles.bold}>{req.usuario?.nombre_usuario}</Text> te envió una solicitud de amistad.
                   </Text>
                   <Text style={styles.time}>Reciente</Text>
 

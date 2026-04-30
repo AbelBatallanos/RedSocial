@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image, ActivityIndicator, Modal, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Settings, Share, Link as LinkIcon, Sparkles, Grid, Bookmark, ChevronRight, X, Camera } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { COLORS, SIZES } from '../../src/styles/theme';
@@ -9,13 +8,15 @@ import { Avatar } from '../../src/components/ui/Avatar';
 import { PremiumModal } from '../../src/components/ui/PremiumModal';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { obtenerPosts, actualizarPerfil } from '../../src/services/api';
+import { Settings, Share, Link as LinkIcon, Sparkles, Grid, Bookmark, ChevronRight, X, Camera, BadgeCheck } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user, token } = useAuthContext();
+  const { user, token, login } = useAuthContext();
+  console.log("👀 DATOS EXACTOS DEL USUARIO:", JSON.stringify(user, null, 2));
 
   const [isPremiumVisible, setPremiumVisible] = useState(false);
   const [misPosts, setMisPosts] = useState<any[]>([]);
@@ -35,7 +36,7 @@ export default function ProfileScreen() {
   const getFullImageUrl = (url: string | null) => {
     if (!url) return null;
     if (url.startsWith('http')) return url;
-    return `http://192.168.1.12:8000${url}`;
+    return `http://54.166.248.222:8000${url}`;
   };
 
   const formatTime = (dateString: string) => {
@@ -78,21 +79,22 @@ export default function ProfileScreen() {
         const ordenados = [...postsResult.data].sort((a: any, b: any) => new Date(b.creado_en).getTime() - new Date(a.creado_en).getTime());
         setMisPosts(ordenados);
       }
-      const amigosRes = await fetch(`http://192.168.1.12:8000/api/amistades/mis-amigos/`, {
+      const amigosRes = await fetch(`http://54.166.248.222:8000/api/amistades/mis-amigos/`, {
         method: 'GET',
         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
       });
 
-      // Verificamos que Django haya respondido con un "200 OK" antes de intentar leer el JSON
       if (amigosRes.ok) {
         const amigosData = await amigosRes.json();
-        if (amigosData.amistades) {
-          setAmigosCount(amigosData.amistades.length);
-        }
+        const conteoAceptados = amigosData.amistades?.filter((a: any) => a.estado === 'accepted').length || 0;
+        setAmigosCount(conteoAceptados);
+        // if (amigosData.amistades) {
+        //   setAmigosCount(amigosData.amistades.length);
+        // }
       } else {
         console.log("⚠️ Backend falló en mis-amigos. Status:", amigosRes.status);
         setAmigosCount(0); // Si falla, le ponemos 0 temporalmente
-}
+      }
     } catch (error) {
       console.log("Error cargando perfil:", error);
     }
@@ -131,18 +133,49 @@ export default function ProfileScreen() {
     if (!token) return;
     setIsSaving(true);
 
-    // Filtramos para no mandar fechas vacías si no las llenó bien
+    // Limpieza de datos antes de enviar
     const datosFinales: any = { ...editForm };
-    if (!datosFinales.fecha_nacimiento) delete datosFinales.fecha_nacimiento;
+
+    // Si la fecha está vacía o tiene espacios, la eliminamos para que no falle el backend
+    if (!datosFinales.fecha_nacimiento || datosFinales.fecha_nacimiento.trim() === "") {
+      delete datosFinales.fecha_nacimiento;
+    }
+
+    console.log("📤 Enviando datos al perfil:", datosFinales);
 
     const res = await actualizarPerfil(token, datosFinales, editImage);
     setIsSaving(false);
 
     if (res.success) {
+      // 🔥 SOLUCIÓN AL ERROR DE CONTEXTO:
+      // res.data ya trae el objeto con "nombre_usuario", "avatar", etc.
+      if (res.data) {
+        try {
+          // Debes pasar el token actual y el nuevo objeto de usuario
+          await login(token, res.data);
+        } catch (err) {
+          console.log("Error al actualizar estado global:", err);
+        }
+      }
       setEditModalVisible(false);
-      Alert.alert("Éxito", "Perfil actualizado. (Cierra y abre la app para ver los cambios completos).");
+      Alert.alert("Éxito", "Perfil actualizado correctamente.");
     } else {
-      Alert.alert("Error", typeof res.error === 'string' ? res.error : "Verifica que la fecha sea AAAA-MM-DD");
+      // 🔥 LOG CRÍTICO: Aquí verás el error real en tu terminal de VS Code / Metro
+      console.log("❌ Error detallado del Backend:", JSON.stringify(res.error, null, 2));
+
+      // Mejoramos el mensaje del Alert para que sea más informativo
+      let mensajeError = "No se pudo actualizar el perfil.";
+      if (typeof res.error === 'object') {
+        // Extraemos el primer error que encontremos en el objeto (ej. de 'fecha_nacimiento' o 'nombre_usuario')
+        const camposConError = Object.keys(res.error);
+        if (camposConError.length > 0) {
+          mensajeError = `${camposConError[0]}: ${res.error[camposConError[0]][0]}`;
+        }
+      } else if (typeof res.error === 'string') {
+        mensajeError = res.error;
+      }
+
+      Alert.alert("Error de validación", mensajeError);
     }
   };
 
@@ -165,7 +198,12 @@ export default function ProfileScreen() {
             <View style={styles.onlineBadge} />
           </View>
 
-          <Text style={styles.name}>{displayName}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 6 }}>
+            <Text style={[styles.name, { marginBottom: 0 }]}>{displayName}</Text>
+            {user?.has_premium && (
+              <BadgeCheck size={24} fill={COLORS.primary} stroke={COLORS.surface} />
+            )}
+          </View>
           <Text style={styles.username}>@{displayName.toLowerCase()}</Text>
 
           <Text style={styles.bio}>{user?.biografia || "Aún no has agregado una biografía."}</Text>
@@ -176,10 +214,12 @@ export default function ProfileScreen() {
               <Text style={styles.statLabel}>Posts</Text>
             </View>
             <View style={styles.divider} />
+
             <View style={styles.statBox}>
-              <Text style={styles.statNumber}>1.2k</Text>
-              <Text style={styles.statLabel}>Fans</Text>
+              <Text style={styles.statNumber}>{amigosCount}</Text>
+              <Text style={styles.statLabel}>Amigos</Text>
             </View>
+
             <View style={styles.divider} />
             <View style={styles.statBox}>
               <Text style={styles.statNumber}>{amigosCount}</Text>
@@ -224,9 +264,9 @@ export default function ProfileScreen() {
             {misPosts.map((post) => (
               <TouchableOpacity key={post.id} style={styles.gridItem} onPress={() => irAlDetalle(post)}>
                 {post.imagen ? (
-                  <Image 
-                    source={{ uri: (editImage || getFullImageUrl(user?.avatar) || 'https://via.placeholder.com/100') as string }} 
-                    style={styles.editAvatarImage} 
+                  <Image
+                    source={{ uri: (editImage || getFullImageUrl(user?.avatar) || 'https://via.placeholder.com/100') as string }}
+                    style={styles.editAvatarImage}
                   />
                 ) : (
                   <View style={styles.gridTextOnly}>

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import { X, CheckCircle, Sparkles, Zap, ShieldCheck, Star } from 'lucide-react-native';
 import { COLORS, SIZES } from '../../styles/theme';
+import { useRouter } from 'expo-router';
 
 const { height } = Dimensions.get('window');
 
@@ -11,12 +12,20 @@ interface PremiumModalProps {
 }
 
 export const PremiumModal = ({ isVisible, onClose }: PremiumModalProps) => {
+  const router = useRouter();
+
   const benefits = [
     { id: '1', title: 'Check Azul de Verificación', desc: 'Gana confianza y destaca en las recomendaciones.', icon: <CheckCircle size={20} stroke={COLORS.primary} /> },
     { id: '2', title: 'Monetiza tus Links', desc: 'Recibe comisiones reales por las reservas que generes.', icon: <Zap size={20} stroke={COLORS.primary} /> },
     { id: '3', title: 'Sin Publicidad', desc: 'Disfruta de una experiencia limpia y enfocada.', icon: <ShieldCheck size={20} stroke={COLORS.primary} /> },
     { id: '4', title: 'Soporte Prioritario', desc: 'Atención 24/7 para tus dudas y gestiones.', icon: <Star size={20} stroke={COLORS.primary} /> },
+    { id: '5', title: 'Mas Recomendaciones', desc: 'Mas recomendaciones para compartir', icon: <Star size={20} stroke={COLORS.primary} /> },
   ];
+
+  const handleGoToCheckout = () => {
+    onClose();
+    router.push('/checkout');
+  };
 
   return (
     <Modal
@@ -56,14 +65,14 @@ export const PremiumModal = ({ isVisible, onClose }: PremiumModalProps) => {
 
             {/* Pricing Card */}
             <View style={styles.pricingCard}>
-              <Text style={styles.planName}>Plan Anual</Text>
+              <Text style={styles.planName}>Plan Mensual</Text>
               <View style={styles.priceRow}>
-                <Text style={styles.price}>$4.99</Text>
+                <Text style={styles.price}>$2.99</Text>
                 <Text style={styles.period}>/mes</Text>
               </View>
               <Text style={styles.saveBadge}>Ahorra un 20%</Text>
               
-              <TouchableOpacity style={styles.subscribeBtn}>
+              <TouchableOpacity style={styles.subscribeBtn} onPress={handleGoToCheckout}>
                 <Text style={styles.subscribeText}>Suscribirme Ahora</Text>
               </TouchableOpacity>
               <Text style={styles.footerNote}>Cancela en cualquier momento.</Text>
