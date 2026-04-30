@@ -43,7 +43,8 @@ class RegisterView(APIView):
                 "user": {
                     "id": user.id,
                     "correo": user.correo,
-                    "nombre_usuario": user.nombre_usuario
+                    "nombre_usuario": user.nombre_usuario,
+                    "has_premium": user.has_premium
                 },
                 "tokens": {
                     "refresh": str(refresh),

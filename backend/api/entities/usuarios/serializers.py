@@ -88,7 +88,7 @@ class MiPerfilSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ['nombre_usuario', 'correo', 'avatar', 'biografia', 'fecha_nacimiento', 'estado']
+        fields = ['nombre_usuario', 'correo', 'avatar', 'biografia', 'fecha_nacimiento', 'estado', "has_premium"]
         read_only_fields =['id', 'correo']  # por ejemplo, si no quieres permitir cambiar el correo
 
     def validate_nombre_usuario(self, value):

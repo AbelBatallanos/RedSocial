@@ -7,6 +7,7 @@ class ReaccionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reaccion
         fields = "__all__"
+        read_only_fields= ["id"]
 
     def validate(self, attrs):
         stars = attrs.get("stars")
